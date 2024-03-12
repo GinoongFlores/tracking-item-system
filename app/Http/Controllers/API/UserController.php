@@ -3,7 +3,7 @@
 namespace App\Http\Controllers\API;
 
 use App\Http\Controllers\Controller;
-use App\Models\Roles;
+use App\Models\Role;
 use Illuminate\Http\Request;
 use App\Models\User;
 use Illuminate\Support\Facades\Auth;
@@ -23,7 +23,7 @@ class UserController extends Controller
     }
 
     public function register (Request $request): JsonResponse {
-        $validator  = Validator::make($request->all(), [
+        $validator = Validator::make($request->all(), [
             'first_name' => 'required|max:255',
             'last_name' => 'required|max:255',
             'phone' => 'numeric|unique:users',
@@ -50,7 +50,7 @@ class UserController extends Controller
         }
 
          // attach role
-         $role = Roles::where('role_name', $request->role)->first(); // get role
+         $role = Role::where('role_name', $request->role)->first(); // get role
          if($role === null) {
             return $this->sendError("Role not found", 400);
         }
@@ -64,20 +64,33 @@ class UserController extends Controller
         // token
         $success['token'] = $user->createToken('MyApp')->accessToken;
         $success['first_name'] = $user->first_name;
+        $success['role'] = $role->role_name;
 
         return $this->sendResponse($success, 'User registered successfully.');
     }
 
     public function login (Request $request): JsonResponse {
+        $validator = Validator::make($request->all(), [
+            'email' => 'required|email|max:255',
+            'password' => 'required|min:8',
+        ]);
+
+        // show validate errors
+        if($validator->fails()) {
+            return $this->sendError(['error' => $validator->errors()], 400, false);
+        }
+
         if (Auth::attempt(['email' => $request->email, 'password' => $request->password])) {
             $user = Auth::user();
             $success['token'] = $user->createToken('MyApp')->accessToken;
             $success['first_name'] = $user->first_name;
             $token = $success['token'];
             $profile = $success['first_name'];
+            $role = $user->roles->first()->role_name;
 
             return response()->json([
                 'message' => 'Welcome '. $profile,
+                'role' => $role,
                 'status' => 'success',
                 'token' => $token,
             ]);
