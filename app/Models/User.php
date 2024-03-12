@@ -8,13 +8,14 @@ use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Passport\HasApiTokens;
 use Illuminate\Database\Eloquent\Model;
+use App\Models\Role;
 
 class User extends Authenticatable
 {
     use HasApiTokens, HasFactory, Notifiable;
 
     public function roles() {
-        return $this->belongsToMany(Roles::class, 'role_user')->withTimestamps();
+        return $this->belongsToMany(Role::class, 'role_users', 'user_id', 'role_id')->withTimestamps();
     }
 
     /**
