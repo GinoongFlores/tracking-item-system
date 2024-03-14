@@ -12,6 +12,7 @@ use Illuminate\Validation\Rule;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 
 class UserController extends Controller
 {
@@ -30,15 +31,14 @@ class UserController extends Controller
             'last_name' => 'required|max:255',
             'phone' => 'numeric|unique:users',
             'email' => 'required|email|max:255|unique:users',
-            'company_name' => 'required|max:255',
             'password' => 'required|min:8',
             'confirm_password' => 'required|same:password',
             'role' => [
                 'required',
-                Rule::in(['Super Admin', 'Admin', 'User']),
+                Rule::in(['super_admin', 'admin', 'user']),
                 function ($attribute, $value, $fail) {
-                    if ($value === "Super Admin" && User::whereHas('roles', function($query) {
-                        $query->where('role_name', 'Super Admin');
+                    if ($value === "super_admin" && User::whereHas('roles', function($query) {
+                        $query->where('role_name', 'super_admin');
                     })->count() > 0) {
                      $fail("The $attribute can only be one Super Admin");
                     //  return $this->sendError(['error' => $fail], 400);
@@ -47,56 +47,59 @@ class UserController extends Controller
             ],
         ]);
 
+        // company name is required to users and admin, and not on super admin
+        $validator->sometimes('company_name', 'required', function ($input) {
+            return $input->role !== 'super_admin';
+        });
+
         // show validate errors
         if($validator->fails()) {
             return $this->sendError(['error' => $validator->errors()], 400);
-        }        // create the user
+        }
 
-        // add a company name only for Super Admin and Admin
+        // set default values for a user and role
+        $user = null;
+        $role = null;
         try {
-            if(in_array($request->role, ['Super Admin', 'Admin'])) {
-                // look for company name
-                $company = Company::where('company_name', $request->company_name)->first();
-
-                $input = $request->all();
-                $input['password'] = bcrypt($input['password']);
-                $input['company_id'] = $company->id;
-
-                if (!$company) {
-                    # return $this->sendError('Company not found', 400);
-                    return response()->json(['error' => 'Company does not exist'], 400);
-                }
-
-                // start a database transaction
-                DB::beginTransaction();
-                $user = User::create($input);
-
-                // commit the transaction
-                DB::commit();
-
-            } else {
-                // if the user is not a Super Admin or Admin, they must select an existing company
-                $company = Company::where('company_name', $request->company_name)->first();
-
-                if (!$company) {
-                    # return $this->sendError('Company not found', 400);
-                    return response()->json(['error' => 'Company does not exist'], 400);
-                }
 
                 // create the user
                 $input = $request->all();
                 $input['password'] = bcrypt($input['password']);
-                $input['company_id'] = $company->id;
+                // $input['company_id'] = $company->id;
 
                 // start a database transaction
                 DB::beginTransaction();
                 $user = User::create($input);
 
+                // attach role
+                $role = Role::where('role_name', $request->role)->first(); // get role
+
+                if($role === null) {
+                    // roll back the transaction in case of an error
+                    DB::rollback();
+                    return $this->sendError("Role not found", 400);
+                }
+
+                // attach role to user
+                $user->roles()->attach($role->id);
+
+                // if the role is user or admin, attach the company
+                if(in_array($role->role_name,['user', 'admin'])) {
+                     $company = Company::where('company_name', $request->company_name)->first(); // get company
+
+                     if(!$company) {
+                        // roll back incase of an error
+                        DB::rollBack();
+                        return $this->sendError(['error' => 'Company does not exist'], 400);
+                     }
+                     // attach company to user
+                     $user->company_id = $company->id;
+                     $user->save();
+                }
+
                 // commit the transaction
                 DB::commit();
-            }
 
-            // create the user
         } catch (\Exception $e) {
             // roll back the transaction in case of an error
             DB::rollBack();
@@ -104,13 +107,9 @@ class UserController extends Controller
             return $this->sendError(['error' => $e->getMessage()], 500);
         }
 
-         // attach role
-         $role = Role::where('role_name', $request->role)->first(); // get role
-         if($role === null) {
-            return $this->sendError("Role not found", 400);
+        if ($user === null) {
+            return $this->sendError(['error' => 'User not created'], 500);
         }
-
-        $user->roles()->attach($role->id); // attach role to user
 
         // token
         $success['token'] = $user->createToken('MyApp')->accessToken;
