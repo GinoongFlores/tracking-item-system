@@ -8,7 +8,9 @@ use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Passport\HasApiTokens;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Str;
 use App\Models\Role;
+use App\Models\Item;
 
 class User extends Authenticatable
 {
@@ -16,6 +18,27 @@ class User extends Authenticatable
 
     public function roles() {
         return $this->belongsToMany(Role::class, 'role_users', 'user_id', 'role_id')->withTimestamps();
+    }
+
+    protected static function boot()
+    {
+        parent::boot();
+
+        static::creating(function ($model) {
+            $model->uuid = (string) Str::uuid();
+        });
+    }
+
+    // company
+    public function company()
+    {
+        return $this->belongsTo(Company::class);
+    }
+
+    // items
+    public function items()
+    {
+        return $this->hasMany(Item::class);
     }
 
     /**
@@ -29,6 +52,8 @@ class User extends Authenticatable
         'phone',
         'email',
         'password',
+        'uuid',
+        'company_id',
     ];
 
     /**
