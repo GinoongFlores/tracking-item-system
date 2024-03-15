@@ -16,13 +16,8 @@ class CompanyController extends Controller
     /**
      * Display a listing of the resource.
      */
-    public function index() : JsonResponse
-    {
-        $company = Company::all();
-        return $this->sendResponse($company->toArray(), 'Company retrieved successfully');
-    }
 
-    // helper function check user permission
+       // helper function check user permission
     private function checkUserPermission($permissionName)
     {
         $user = Auth::user();
@@ -32,6 +27,18 @@ class CompanyController extends Controller
 
         // check if the 'super_admin' role exist and has the specified permission
         return $superAdminRole && $superAdminRole->permissions->contains('permission_name', $permissionName);
+    }
+
+
+    public function index() : JsonResponse
+    {
+        // check user permission
+        if(!$this->checkUserPermission('view_company')) {
+            return $this->sendError(['error' => 'You do not have permission to view a company'], 400, false);
+        }
+
+        $company = Company::all();
+        return $this->sendResponse($company->toArray(), 'Company retrieved successfully');
     }
 
     /**
@@ -84,6 +91,11 @@ class CompanyController extends Controller
      */
     public function show(string $id) : JsonResponse
     {
+        // check user permission
+        if(!$this->checkUserPermission('view_company')) {
+            return $this->sendError(['error' => 'You do not have permission to view a company'], 400, false);
+        }
+
         $company = Company::find($id);
 
         if(is_null($company)) {
@@ -143,6 +155,11 @@ class CompanyController extends Controller
      */
     public function destroy(Company $company) : JsonResponse
     {
+        // check user permission
+        if(!$this->checkUserPermission('delete_company')) {
+            return $this->sendError(['error' => 'You do not have permission to delete a company'], 400);
+        }
+
         DB::beginTransaction();
 
         try {
