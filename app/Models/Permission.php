@@ -49,11 +49,11 @@ Transfer of items workflow on user to another user to admin
 
 */
 
-class Permissions extends Model
+class Permission extends Model
 {
     use HasFactory;
 
     public function roles() {
-        return $this->belongsToMany(Role::class, 'role_permission');
+        return $this->belongsToMany(Role::class, 'permission_roles', 'permission_id', 'role_id')->withTimestamps();
     }
 }
