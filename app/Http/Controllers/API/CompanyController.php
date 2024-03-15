@@ -23,7 +23,7 @@ class CompanyController extends Controller
     }
 
     // helper function check user permission
-    private function checkUpdatePermission($permissionName)
+    private function checkUserPermission($permissionName)
     {
         $user = Auth::user();
 
@@ -47,15 +47,8 @@ class CompanyController extends Controller
      */
     public function store(Request $request) : JsonResponse
     {
-        $user = Auth::user();
-
-        // Get the 'super_admin' role
-        $superAdminRole = $user->roles->firstWhere('role_name', 'super_admin');
-
-        // check if the super_admin exist and has the permission to add a company
-        $hasAddCompanyPermission = $superAdminRole && $superAdminRole->permissions->contains('permission_name', 'add_company');
-
-        if (!$hasAddCompanyPermission) {
+        // check user permission
+        if(!$this->checkUserPermission('add_company')) {
             return $this->sendError(['error' => 'You do not have permission to add a company'], 400);
         }
 
@@ -112,13 +105,8 @@ class CompanyController extends Controller
      */
     public function update(Request $request, string $id) : JsonResponse
     {
-        // check if the request user has the permission to edit a company
-        $user = Auth::user();
-        $superAdminRole = $user->roles->firstWhere('role_name', 'super_admin');
-
-        $hasEditCompanyPermission = $superAdminRole && $superAdminRole->permissions->contains('permission_name', 'edit_company');
-
-        if (!$hasEditCompanyPermission) {
+        // check user permission
+        if(!$this->checkUserPermission('edit_company')) {
             return $this->sendError(['error' => 'You do not have permission to edit a company'], 400);
         }
 
