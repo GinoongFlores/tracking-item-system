@@ -16,6 +16,15 @@ use Illuminate\Support\Facades\Log;
 
 class UserController extends Controller
 {
+
+    // helper function to check user permission and role
+    private function checkUserAndPermission($permissionName, $userRole = 'super_admin' )
+    {
+        $user = Auth::user();
+        $role = $user->roles->firstWhere('role_name', $userRole); // get role
+        return $role && $role->permissions->contains('permission_name', $permissionName);
+    }
+
     public function index () {
         $user = User::all();
         return response()->json($user->toArray(), 200);
@@ -42,6 +51,14 @@ class UserController extends Controller
                     })->count() > 0) {
                      $fail("The $attribute can only be one Super Admin");
                     //  return $this->sendError(['error' => $fail], 400);
+                    }
+                    // check user permission to add an admin
+                    if($value === "admin" && !$this->checkUserAndPermission("add_admin")) {
+                        $fail("Only a super admin can create an admin");
+                    }
+                    // check user permission to add a user
+                    if($value === "user" && !$this->checkUserAndPermission("add_users", "admin")) {
+                        $fail("Only an admin can create a user");
                     }
                 },
             ],
