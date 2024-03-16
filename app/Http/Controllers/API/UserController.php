@@ -136,6 +136,43 @@ class UserController extends Controller
         return $this->sendResponse($success, 'User registered successfully.');
     }
 
+    // assign role to user
+    public function assignRole(Request $request, $userId) : JsonResponse
+    {
+        // check if the requested user is a super admin before assigning a role
+        if(!$this->checkUserAndPermission(['add_admin', 'add_users'], 'super_admin')) {
+            return $this->sendError(['error' => 'Unauthorized'], 401);
+        }
+
+        $validator = Validator::make($request->all(), [
+            'role' => [
+                'required',
+                Rule::in(['admin', 'user']), //  check if the role is valid
+            ]
+        ]);
+
+        if($validator->fails()) {
+            return $this->sendError(['error' => $validator->errors()], 400);
+        }
+
+        $user = User::find($userId); // get user
+        if(!$user) {
+            return $this->sendError(['error' => 'User not found'], 400);
+        }
+
+        // get the role before attaching
+        $role = Role::where('role_name', $request->role)->first(); // get role
+        if(!$role) {
+            return $this->sendError(['error' => 'Role not found'], 400);
+        }
+
+        // attach the role to the user
+        $user->roles()->attach($role->id);
+
+        return $this->sendResponse($user->toArray(), 'Role assigned successfully');
+
+    }
+
     public function login (Request $request): JsonResponse {
         $validator = Validator::make($request->all(), [
             'email' => 'required|email|max:255',
