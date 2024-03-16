@@ -18,11 +18,25 @@ class UserController extends Controller
 {
 
     // helper function to check user permission and role
-    private function checkUserAndPermission($permissionName, $userRole = 'super_admin' )
+    private function checkUserAndPermission(array $permissionNames, $userRole = 'super_admin' )
     {
         $user = Auth::user();
         $role = $user->roles->firstWhere('role_name', $userRole); // get role
-        return $role && $role->permissions->contains('permission_name', $permissionName);
+
+        // check if the user has the permission and role
+        if (!$role) {
+            return false;
+        }
+
+        // loop through the permission names to check if the user has the permission
+        foreach($permissionNames as $permissionName) {
+            if(!$role->permissions->contains('permission_name', $permissionName)) {
+                return false;
+            }
+        }
+
+    // return true if the user has the permission and role
+        return true;
     }
 
     public function index () {
