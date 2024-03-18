@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\API;
 
 use App\Http\Controllers\Controller;
+use App\Models\Company;
 use App\Models\Role;
 use Illuminate\Http\Request;
 use App\Models\User;
@@ -10,9 +11,20 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Validation\Rule;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 
 class UserController extends Controller
 {
+
+    // helper function to check user permission and role
+    private function checkUserAndPermission($permissionName, $userRole = 'super_admin' )
+    {
+        $user = Auth::user();
+        $role = $user->roles->firstWhere('role_name', $userRole); // get role
+        return $role && $role->permissions->contains('permission_name', $permissionName);
+    }
+
     public function index () {
         $user = User::all();
         return response()->json($user->toArray(), 200);
@@ -32,34 +44,89 @@ class UserController extends Controller
             'confirm_password' => 'required|same:password',
             'role' => [
                 'required',
-                Rule::in(['Super Admin', 'Admin', 'User']),
+                Rule::in(['super_admin', 'admin', 'user']),
                 function ($attribute, $value, $fail) {
-                    if ($value === "Super Admin" && User::whereHas('roles', function($query) {
-                        $query->where('role_name', 'Super Admin');
+                    if ($value === "super_admin" && User::whereHas('roles', function($query) {
+                        $query->where('role_name', 'super_admin');
                     })->count() > 0) {
-                     $fail('There can only be one Super Admin');
+                     $fail("The $attribute can only be one Super Admin");
                     //  return $this->sendError(['error' => $fail], 400);
+                    }
+                    // check user permission to add an admin
+                    if($value === "admin" && !$this->checkUserAndPermission("add_admin")) {
+                        $fail("Only a super admin can create an admin");
+                    }
+                    // check user permission to add a user
+                    if($value === "user" && !$this->checkUserAndPermission("add_users", "admin")) {
+                        $fail("Only an admin can create a user");
                     }
                 },
             ],
         ]);
+
+        // company name is required to users and admin, and not on super admin
+        $validator->sometimes('company_name', 'required', function ($input) {
+            return $input->role !== 'super_admin';
+        });
 
         // show validate errors
         if($validator->fails()) {
             return $this->sendError(['error' => $validator->errors()], 400);
         }
 
-         // attach role
-         $role = Role::where('role_name', $request->role)->first(); // get role
-         if($role === null) {
-            return $this->sendError("Role not found", 400);
+        // set default values for a user and role
+        $user = null;
+        $role = null;
+        try {
+
+                // create the user
+                $input = $request->all();
+                $input['password'] = bcrypt($input['password']);
+                // $input['company_id'] = $company->id;
+
+                // start a database transaction
+                DB::beginTransaction();
+                $user = User::create($input);
+
+                // attach role
+                $role = Role::where('role_name', $request->role)->first(); // get role
+
+                if($role === null) {
+                    // roll back the transaction in case of an error
+                    DB::rollback();
+                    return $this->sendError("Role not found", 400);
+                }
+
+                // attach role to user
+                $user->roles()->attach($role->id);
+
+                // if the role is user or admin, attach the company
+                if(in_array($role->role_name,['user', 'admin'])) {
+                     $company = Company::where('company_name', $request->company_name)->first(); // get company
+
+                     if(!$company) {
+                        // roll back incase of an error
+                        DB::rollBack();
+                        return $this->sendError(['error' => 'Company does not exist'], 400);
+                     }
+                     // attach company to user
+                     $user->company_id = $company->id;
+                     $user->save();
+                }
+
+                // commit the transaction
+                DB::commit();
+
+        } catch (\Exception $e) {
+            // roll back the transaction in case of an error
+            DB::rollBack();
+            //return an error response
+            return $this->sendError(['error' => $e->getMessage()], 500);
         }
 
-        $input = $request->all();
-        $input['password'] = bcrypt($input['password']);
-        $user = User::create($input);
-
-        $user->roles()->attach($role->id); // attach role to user
+        if ($user === null) {
+            return $this->sendError(['error' => 'User not created'], 500);
+        }
 
         // token
         $success['token'] = $user->createToken('MyApp')->accessToken;

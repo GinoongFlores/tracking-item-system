@@ -3,6 +3,7 @@
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\API\UserController;
+use App\Http\Controllers\API\CompanyController;
 
 /*
 |--------------------------------------------------------------------------
@@ -15,10 +16,12 @@ use App\Http\Controllers\API\UserController;
 |
 */
 
-Route::post('register', [UserController::class, 'register']);
+// Route::post('register', [UserController::class, 'register']);
 Route::post('login',[UserController::class, 'login']);
 Route::post('index',  [UserController::class, 'index']);
 
 Route::middleware('auth:api')->group(function () {
-
+    Route::post('register', [UserController::class, 'register']);
+    Route::apiResource('company', CompanyController::class);
+    Route::post('company/{company}', [CompanyController::class, 'update']);
 });
