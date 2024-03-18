@@ -57,7 +57,7 @@ class PermissionsTableSeeder extends Seeder
         ];
 
         foreach ($permissions as $permission) {
-            Permission::create(['permission_name' => $permission]); // create a new record in the permissions table
+            Permission::firstOrCreate(['permission_name' => $permission]); // create a new record in the permissions table
         }
     }
 }
