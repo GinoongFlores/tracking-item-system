@@ -40,12 +40,31 @@ class UserController extends Controller
     }
 
     public function index () {
+      // check if the requested user is a super admin
+      if(!$this->checkUserAndPermission(['view_users'], 'super_admin')) {
+        return $this->sendError(['error' => 'Unauthorized'], 401);
+      }
+
         $user = User::all();
         return response()->json($user->toArray(), 200);
     }
 
     public function currentUser () {
         return response()->json(Auth::user(), 200);
+    }
+
+    public function show(string $id) {
+        // check if the requested user is a super admin
+      if(!$this->checkUserAndPermission(['view_users'], 'super_admin')) {
+        return $this->sendError(['error' => 'Unauthorized'], 401);
+      }
+
+        $user = User::find($id);
+        if(!$user) {
+            return $this->sendError(['error' => 'User not found'], 400);
+        }
+
+        return $this->sendResponse($user->toArray(), 'User retrieved successfully');
     }
 
     public function register (Request $request): JsonResponse {
@@ -56,6 +75,7 @@ class UserController extends Controller
             'email' => 'required|email|max:255|unique:users',
             'password' => 'required|min:8',
             'confirm_password' => 'required|same:password',
+            'company_name' => 'required|max:255',
             'role' => [
                 'required',
                 Rule::in(['super_admin', 'admin', 'user']),
@@ -65,14 +85,6 @@ class UserController extends Controller
                     })->count() > 0) {
                      $fail("The $attribute can only be one Super Admin");
                     //  return $this->sendError(['error' => $fail], 400);
-                    }
-                    // check user permission to add an admin
-                    if($value === "admin" && !$this->checkUserAndPermission("add_admin")) {
-                        $fail("Only a super admin can create an admin");
-                    }
-                    // check user permission to add a user
-                    if($value === "user" && !$this->checkUserAndPermission("add_users", "admin")) {
-                        $fail("Only an admin can create a user");
                     }
                 },
             ],
@@ -88,9 +100,6 @@ class UserController extends Controller
             return $this->sendError(['error' => $validator->errors()], 400);
         }
 
-        // set default values for a user and role
-        $user = null;
-        $role = null;
         try {
 
                 // create the user
@@ -114,18 +123,19 @@ class UserController extends Controller
                 // attach role to user
                 $user->roles()->attach($role->id);
 
-                // if the role is user or admin, attach the company
-                if(in_array($role->role_name,['user', 'admin'])) {
-                     $company = Company::where('company_name', $request->company_name)->first(); // get company
+                // attach company to user
+                if(isset($request->company_name)) {
+                    $company = Company::where('company_name', $request->company_name)->first();
 
-                     if(!$company) {
-                        // roll back incase of an error
+                    if(!$company) {
+                        // roll back in case of an error
                         DB::rollBack();
-                        return $this->sendError(['error' => 'Company does not exist'], 400);
-                     }
-                     // attach company to user
-                     $user->company_id = $company->id;
-                     $user->save();
+                        return $this->sendError(['error' => 'Company not found'], 400);
+                    }
+
+                    // attach company to user
+                    $user->company_id = $company->id;
+                    $user->save(); // save user with company
                 }
 
                 // commit the transaction
@@ -145,7 +155,6 @@ class UserController extends Controller
         // token
         $success['token'] = $user->createToken('MyApp')->accessToken;
         $success['first_name'] = $user->first_name;
-        $success['role'] = $role->role_name;
 
         return $this->sendResponse($success, 'User registered successfully.');
     }
@@ -185,6 +194,7 @@ class UserController extends Controller
 
         try {
             $user->update($request->all());
+            DB::commit();
 
             return $this->sendResponse($user->toArray(), 'User updated successfully');
         } catch (\Exception $e) {
@@ -192,7 +202,6 @@ class UserController extends Controller
             return $this->sendError(['error' => $e->getMessage()], 400);
         }
 
-        DB::commit();
         return $this->sendResponse($user->toArray(), 'User updated successfully');
 
     }
@@ -273,7 +282,7 @@ class UserController extends Controller
 
         // show validate errors
         if($validator->fails()) {
-            return $this->sendError(['error' => $validator->errors()], 400, false);
+            return $this->sendError(['error' => $validator->errors()], 400);
         }
 
         if (Auth::attempt(['email' => $request->email, 'password' => $request->password])) {
@@ -282,16 +291,15 @@ class UserController extends Controller
             $success['first_name'] = $user->first_name;
             $token = $success['token'];
             $profile = $success['first_name'];
-            $role = $user->roles->first()->role_name;
+            // $role = $user->roles->first()->role_name;
 
             return response()->json([
                 'message' => 'Welcome '. $profile,
-                'role' => $role,
                 'status' => 'success',
                 'token' => $token,
             ]);
         } else {
-            return $this->sendError('Unauthorized', ['error' => 'Unauthorized'], 401, false);
+            return $this->sendError('Unauthorized', ['error' => 'Unauthorized'], 401);
         }
     }
 
