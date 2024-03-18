@@ -18,10 +18,20 @@ use App\Http\Controllers\API\CompanyController;
 
 // Route::post('register', [UserController::class, 'register']);
 Route::post('login',[UserController::class, 'login']);
-Route::post('index',  [UserController::class, 'index']);
+Route::post('register', [UserController::class, 'register']);
+// Route::get('index',  [UserController::class, 'index'])->middleware('auth:api');
+Route::post('/users/{id}/assign_role', [UserController::class, 'assignRole'])->middleware('auth:api');
 
 Route::middleware('auth:api')->group(function () {
-    Route::post('register', [UserController::class, 'register']);
+    // api resource
     Route::apiResource('company', CompanyController::class);
-    Route::post('company/{company}', [CompanyController::class, 'update']);
+    Route::apiResource('users', UserController::class);
+
+    // company post method
+    Route::post('company/{id}/update', [CompanyController::class, 'update']);
+    Route::post('company/{id}/restore', [CompanyController::class, 'restore']);
+
+    // users post method
+    Route::post('/users/{id}/activation', [UserController::class, 'toggleActivation']);
+    Route::post('/users/{id}/update', [UserController::class, 'update']);
 });
