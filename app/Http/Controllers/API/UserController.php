@@ -187,6 +187,37 @@ class UserController extends Controller
 
     }
 
+    // user activation
+    public function toggleActivation($id): JsonResponse
+    {
+
+        $user = User::find($id);
+        if(!$user) {
+            return $this->sendError(['error' => 'User not found'], 400);
+        }
+
+       $currentUser = Auth::user(); // get the current user
+
+        // if the current user is a super admin
+        if($currentUser->roles->firstWhere('role_name', 'super_admin')) {
+            // super admin can activate/deactivate any user
+            $user->is_activated = !$user->is_activated;
+            $user->save();
+            return $this->sendResponse($user->toArray(), 'User activation status updated successfully');
+        } else if($currentUser->roles->firstWhere('role_name', 'admin')) {
+            // admin can only activate/deactivate users, not super admin
+            if(!$user->roles->firstWhere('role_name', 'super_admin')) {
+                $user->is_activated = !$user->is_activated;
+                $user->save();
+                return $this->sendResponse($user->toArray(), 'User activation status updated successfully');
+            } else {
+                return $this->sendError(['error' => 'Unauthorized: Admin cannot deactivate a super admin']);
+            }
+        } else {
+            return $this->sendError(['error' => 'Unauthorized'], 401);
+        }
+    }
+
     public function login (Request $request): JsonResponse {
         $validator = Validator::make($request->all(), [
             'email' => 'required|email|max:255',
