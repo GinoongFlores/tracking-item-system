@@ -4,6 +4,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\API\UserController;
 use App\Http\Controllers\API\CompanyController;
+use App\Http\Controllers\API\ItemController;
 
 /*
 |--------------------------------------------------------------------------
@@ -26,6 +27,7 @@ Route::middleware('auth:api')->group(function () {
     // api resource
     Route::apiResource('company', CompanyController::class);
     Route::apiResource('users', UserController::class);
+    Route::apiResource('item', ItemController::class);
 
     // company post method
     Route::post('company/{id}/update', [CompanyController::class, 'update']);
@@ -34,4 +36,7 @@ Route::middleware('auth:api')->group(function () {
     // users post method
     Route::post('/users/{id}/activation', [UserController::class, 'toggleActivation']);
     Route::post('/users/{id}/update', [UserController::class, 'update']);
+
+    // item post method
+    Route::post('item/{id}/restore', [ItemController::class, 'restore']);
 });
