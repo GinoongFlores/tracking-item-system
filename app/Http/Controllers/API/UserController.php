@@ -150,6 +150,53 @@ class UserController extends Controller
         return $this->sendResponse($success, 'User registered successfully.');
     }
 
+    // update/edit user details
+    public function update(Request $request, $userId) : JsonResponse
+    {
+        $user = User::find($userId); // get user
+        if(!$user) {
+            return $this->sendError(['error' => 'User not found'], 400);
+        }
+
+        $validator = Validator::make($request->all(), [
+            'first_name' => 'max:255',
+            'last_name' => 'max:255',
+            // allows the users to update even if the phone number & email is the same
+            'phone' => 'numeric|unique:users,phone,' . $user->id,
+            'email' => 'email|max:255|unique:users,email,' . $user->id,
+            'company_name' => 'max:255',
+        ]);
+
+        if($validator->fails()) {
+            return $this->sendError(['error' => $validator->errors()], 400);
+        }
+
+        // check company name
+        if(isset($request->company_name)) {
+            $company = Company::where('company_name', $request->company_name)->first();
+            if(!$company) {
+                return $this->sendError(['error' => 'Company not found'], 400);
+            }
+            // assign company to user
+            $user->company_id = $company->id;
+        }
+
+        DB::beginTransaction();
+
+        try {
+            $user->update($request->all());
+
+            return $this->sendResponse($user->toArray(), 'User updated successfully');
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return $this->sendError(['error' => $e->getMessage()], 400);
+        }
+
+        DB::commit();
+        return $this->sendResponse($user->toArray(), 'User updated successfully');
+
+    }
+
     // assign role to user
     public function assignRole(Request $request, $userId) : JsonResponse
     {
