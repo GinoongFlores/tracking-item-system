@@ -28,7 +28,7 @@ class UserController extends Controller
             return false;
         }
 
-        // loop through the permission names to check if the user has the permission
+        // loop through the permission names to check if the user has the permission and role
         foreach($permissionNames as $permissionName) {
             if(!$role->permissions->contains('permission_name', $permissionName)) {
                 return false;

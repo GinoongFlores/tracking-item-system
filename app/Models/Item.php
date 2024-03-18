@@ -4,11 +4,23 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use App\Models\User;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Item extends Model
 {
-    use HasFactory;
+    use HasFactory, SoftDeletes;
+
+    // fillable
+    protected $fillable = [
+        'name',
+        'description',
+        'quantity',
+        'image',
+        'user_id',
+        'company_id',
+    ];
+
+    protected $dates = ['deleted_at'];
 
     // user
     public function user ()
@@ -20,5 +32,11 @@ class Item extends Model
     public function company()
     {
         return $this->belongsTo(Company::class);
+    }
+
+    // get company name of an item from a user
+    public function getCompanyName()
+    {
+        return $this->user->company->company_name;
     }
 }
