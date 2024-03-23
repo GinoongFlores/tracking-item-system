@@ -21,12 +21,13 @@ use App\Http\Controllers\API\ItemController;
 Route::post('login',[UserController::class, 'login']);
 Route::post('register', [UserController::class, 'register']);
 // Route::get('index',  [UserController::class, 'index'])->middleware('auth:api');
-Route::post('/users/{id}/assign_role', [UserController::class, 'assignRole'])->middleware('auth:api');
+Route::post('/user/{id}/assign_role', [UserController::class, 'assignRole'])->middleware('auth:api');
+Route::get('/company/view', [CompanyController::class, 'showRegisteredCompanies']);
 
 Route::middleware('auth:api')->group(function () {
     // api resource
     Route::apiResource('company', CompanyController::class);
-    Route::apiResource('users', UserController::class);
+    Route::apiResource('user', UserController::class);
     Route::apiResource('item', ItemController::class);
 
     // company post method
@@ -34,8 +35,10 @@ Route::middleware('auth:api')->group(function () {
     Route::post('company/{id}/restore', [CompanyController::class, 'restore']);
 
     // users post method
-    Route::post('/users/{id}/activation', [UserController::class, 'toggleActivation']);
-    Route::post('/users/{id}/update', [UserController::class, 'update']);
+    Route::get('/user', [UserController::class, 'currentUser']);
+    Route::post('/logout', [UserController::class, 'logout']);
+    Route::post('/user/{id}/activation', [UserController::class, 'toggleActivation']);
+    Route::post('/user/{id}/update', [UserController::class, 'update']);
 
     // item post method
     Route::post('item/{id}/restore', [ItemController::class, 'restore']);
