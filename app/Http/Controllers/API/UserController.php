@@ -49,8 +49,20 @@ class UserController extends Controller
         return response()->json($user->toArray(), 200);
     }
 
-    public function currentUser () {
-        return response()->json(Auth::user(), 200);
+    public function currentUser () : JsonResponse
+    {
+        $user = Auth::user();
+
+        if (!$user) {
+            return $this->sendError(['error' => 'No authenticated user'], 400);
+        }
+        $userData = [
+            'first_name' => $user->first_name,
+            // 'role' => $user->roles->first()->role_name,
+            'email' => $user->email,
+        ];
+
+        return $this->sendResponse($userData, 'User retrieved successfully');
     }
 
     public function show(string $id) {
@@ -67,6 +79,36 @@ class UserController extends Controller
         return $this->sendResponse($user->toArray(), 'User retrieved successfully');
     }
 
+    public function login (Request $request): JsonResponse {
+        $validator = Validator::make($request->all(), [
+            'email' => 'required|email|max:255',
+            'password' => 'required|min:8',
+        ]);
+
+        // show validate errors
+        if($validator->fails()) {
+            return $this->sendError(['error' => $validator->errors()], 400);
+        }
+
+        if (Auth::attempt(['email' => $request->email, 'password' => $request->password])) {
+            $user = Auth::user();
+            $success['token'] = $user->createToken('MyApp')->accessToken;
+            $success['first_name'] = $user->first_name;
+            $token = $success['token'];
+            $profile = $success['first_name'];
+            // $role = $user->roles->first()->role_name;
+
+            return response()->json([
+                'message' => 'Welcome '. $profile,
+                'status' => 'success',
+                'token' => $token,
+            ]);
+        } else {
+            return $this->sendError('Unauthorized', ['error' => 'Unauthorized'], 401);
+        }
+    }
+
+
     public function register (Request $request): JsonResponse {
         $validator = Validator::make($request->all(), [
             'first_name' => 'required|max:255',
@@ -76,18 +118,18 @@ class UserController extends Controller
             'password' => 'required|min:8',
             'confirm_password' => 'required|same:password',
             'company_name' => 'required|max:255',
-            'role' => [
-                'required',
-                Rule::in(['super_admin', 'admin', 'user']),
-                function ($attribute, $value, $fail) {
-                    if ($value === "super_admin" && User::whereHas('roles', function($query) {
-                        $query->where('role_name', 'super_admin');
-                    })->count() > 0) {
-                     $fail("The $attribute can only be one Super Admin");
-                    //  return $this->sendError(['error' => $fail], 400);
-                    }
-                },
-            ],
+            // 'role' => [
+            //     'nullable',
+            //     Rule::in(['super_admin', 'admin', 'user']),
+            //     function ($attribute, $value, $fail) {
+            //         if ($value === "super_admin" && User::whereHas('roles', function($query) {
+            //             $query->where('role_name', 'super_admin');
+            //         })->count() > 0) {
+            //          $fail("The $attribute can only be one Super Admin");
+            //         //  return $this->sendError(['error' => $fail], 400);
+            //         }
+            //     },
+            // ],
         ]);
 
         // company name is required to users and admin, and not on super admin
@@ -112,16 +154,16 @@ class UserController extends Controller
                 $user = User::create($input);
 
                 // attach role
-                $role = Role::where('role_name', $request->role)->first(); // get role
+                // $role = Role::where('role_name', $request->role)->first(); // get role
 
-                if($role === null) {
-                    // roll back the transaction in case of an error
-                    DB::rollback();
-                    return $this->sendError("Role not found", 400);
-                }
+                // if($role === null) {
+                //     // roll back the transaction in case of an error
+                //     DB::rollback();
+                //     return $this->sendError("Role not found", 400);
+                // }
 
                 // attach role to user
-                $user->roles()->attach($role->id);
+                // $user->roles()->attach($role->id);
 
                 // attach company to user
                 if(isset($request->company_name)) {
@@ -156,7 +198,12 @@ class UserController extends Controller
         $success['token'] = $user->createToken('MyApp')->accessToken;
         $success['first_name'] = $user->first_name;
 
-        return $this->sendResponse($success, 'User registered successfully.');
+        return response()->json([
+            'message' => 'Successfully registered',
+            'status' => 'success',
+            'name' => $success['first_name'],
+            'token' => $success['token'] ,
+        ]);
     }
 
     // update/edit user details
@@ -274,34 +321,6 @@ class UserController extends Controller
         }
     }
 
-    public function login (Request $request): JsonResponse {
-        $validator = Validator::make($request->all(), [
-            'email' => 'required|email|max:255',
-            'password' => 'required|min:8',
-        ]);
-
-        // show validate errors
-        if($validator->fails()) {
-            return $this->sendError(['error' => $validator->errors()], 400);
-        }
-
-        if (Auth::attempt(['email' => $request->email, 'password' => $request->password])) {
-            $user = Auth::user();
-            $success['token'] = $user->createToken('MyApp')->accessToken;
-            $success['first_name'] = $user->first_name;
-            $token = $success['token'];
-            $profile = $success['first_name'];
-            // $role = $user->roles->first()->role_name;
-
-            return response()->json([
-                'message' => 'Welcome '. $profile,
-                'status' => 'success',
-                'token' => $token,
-            ]);
-        } else {
-            return $this->sendError('Unauthorized', ['error' => 'Unauthorized'], 401);
-        }
-    }
 
     public function logout (Request $request): JsonResponse {
         $request->user()->token()->revoke();
