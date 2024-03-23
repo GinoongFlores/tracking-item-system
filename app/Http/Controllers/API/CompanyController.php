@@ -34,11 +34,17 @@ class CompanyController extends Controller
     {
         // check user permission
         if(!$this->checkUserPermission('view_company')) {
-            return $this->sendError(['error' => 'You do not have permission to view a company'], 400, false);
+            return $this->sendError(['error' => 'You do not have permission to view a company'], 400);
         }
 
-        $company = Company::all();
-        return $this->sendResponse($company->toArray(), 'Company retrieved successfully');
+        $company = Company::latest()->paginate(10);
+        return $this->sendResponse(CompanyResource::collection($company), 'Companies retrieved successfully');
+    }
+
+    public function showRegisteredCompanies() : JsonResponse
+    {
+        $company = Company::latest()->get();
+        return $this->sendResponse(CompanyResource::collection($company), 'Companies retrieved successfully');
     }
 
     /**
@@ -79,7 +85,7 @@ class CompanyController extends Controller
             $company = Company::create($request->all());
             DB::commit();
 
-            return $this->sendResponse($company->toArray(), 'Company created successfully');
+            return $this->sendResponse(new CompanyResource($company), 'Company created successfully');
         } catch (\Exception $e) {
             DB::rollBack();
             return $this->sendError($e->getMessage(), [], 400);
@@ -93,13 +99,13 @@ class CompanyController extends Controller
     {
         // check user permission
         if(!$this->checkUserPermission('view_company')) {
-            return $this->sendError(['error' => 'You do not have permission to view a company'], 400, false);
+            return $this->sendError(['error' => 'You do not have permission to view a company'], 400);
         }
 
         $company = Company::find($id);
 
         if(is_null($company)) {
-            return $this->sendError(['error' => 'Company does not exist'], 400, false);
+            return $this->sendError(['error' => 'Company does not exist'], 400);
         }
 
         return $this->sendResponse(new CompanyResource($company), 'Company retrieved successfully');
@@ -143,7 +149,7 @@ class CompanyController extends Controller
             $company->update($request->all());
             DB::commit();
 
-            return $this->sendResponse($company->toArray(), 'Company updated successfully');
+            return $this->sendResponse(new CompanyResource($company), 'Company updated successfully');
         } catch (\Exception $e) {
             DB::rollBack();
             return $this->sendError($e->getMessage(), [], 400);
@@ -166,10 +172,28 @@ class CompanyController extends Controller
             $company->delete();
             DB::commit();
 
-            return $this->sendResponse($company->toArray(), 'Company deleted successfully');
+            return $this->sendResponse([], 'Company deleted successfully');
         } catch (\Exception $e) {
             DB::rollBack();
             return $this->sendError($e->getMessage(), [], 400);
         }
+    }
+
+    // restore deleted company
+
+    public function restore($id): JsonResponse {
+        // check user permission
+        if(!$this->checkUserPermission('restore_company')) {
+            return $this->sendError(['error' => 'You do not have permission to restore a company'], 400);
+        }
+
+        $company = Company::withTrashed()->find($id); // find company with trashed
+
+        if(!$company) {
+            return $this->sendError(['error' => 'Company does not exist'], 400);
+        }
+
+        $company->restore(); // restore company
+        return $this->sendResponse(new CompanyResource($company), 'Company restored successfully');
     }
 }

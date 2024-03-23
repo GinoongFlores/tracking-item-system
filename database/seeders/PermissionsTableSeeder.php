@@ -5,25 +5,29 @@ namespace Database\Seeders;
 use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
 use App\Models\Permission;
+use Illuminate\Support\Facades\DB;
 
 class PermissionsTableSeeder extends Seeder
 {
     /**
      * Run the database seeds.
      */
+
     public function run(): void
     {
         $permissions = [
 
             // super_admin
+            'activate_admin',
+            'deactivate_admin',
             'add_admin',
             'edit_admin',
             'delete_admin',
             'view_admin',
 
             // super_admin & admin
-            'deactivate_admin',
-            'deactivate_user',
+            'activate_users',
+            'deactivate_users',
 
             // super_admin & admin per company
             'add_users',
@@ -34,6 +38,7 @@ class PermissionsTableSeeder extends Seeder
             // super_admin
             'add_company',
             'delete_company',
+            'restore_company',
 
             // super_admin & admin
             'edit_company',
@@ -44,12 +49,13 @@ class PermissionsTableSeeder extends Seeder
             'edit_item',
             'delete_item',
 
-            // super_admin & admin per company
+            // super, super_admin & admin per company
             'view_item',
 
             // admin & user per company
             'approve_item',
             'reject_item',
+            'restore_item',
 
               // admin & user per company
               'view_pending_items',
@@ -57,7 +63,7 @@ class PermissionsTableSeeder extends Seeder
         ];
 
         foreach ($permissions as $permission) {
-            Permission::create(['permission_name' => $permission]); // create a new record in the permissions table
+            Permission::firstOrCreate(['permission_name' => $permission]); // create a new record in the permissions table
         }
     }
 }

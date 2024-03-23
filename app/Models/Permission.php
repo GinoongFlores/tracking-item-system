@@ -40,6 +40,11 @@ _ view_items
 - add_item
 - view_users
 
+Registration of users workflow
+- users can register as admin or user
+- super admin will select on the list of users and attach a role to the user (user or admin)
+So an admin is not directly created by the super admin and a user will not be directly created by the admin. Yet the super admin can create an admin and the admin can create a user. So we shouldn't include the endpoint of register to the middleware
+
 Transfer of items workflow on user to another user to admin
 - user will add an item to the list of items
 - user will select an item from the list of items or add a new item

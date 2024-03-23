@@ -4,6 +4,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\API\UserController;
 use App\Http\Controllers\API\CompanyController;
+use App\Http\Controllers\API\ItemController;
 
 /*
 |--------------------------------------------------------------------------
@@ -18,10 +19,27 @@ use App\Http\Controllers\API\CompanyController;
 
 // Route::post('register', [UserController::class, 'register']);
 Route::post('login',[UserController::class, 'login']);
-Route::post('index',  [UserController::class, 'index']);
+Route::post('register', [UserController::class, 'register']);
+// Route::get('index',  [UserController::class, 'index'])->middleware('auth:api');
+Route::post('/user/{id}/assign_role', [UserController::class, 'assignRole'])->middleware('auth:api');
+Route::get('/company/view', [CompanyController::class, 'showRegisteredCompanies']);
 
 Route::middleware('auth:api')->group(function () {
-    Route::post('register', [UserController::class, 'register']);
+    // api resource
     Route::apiResource('company', CompanyController::class);
-    Route::post('company/{company}', [CompanyController::class, 'update']);
+    Route::apiResource('user', UserController::class);
+    Route::apiResource('item', ItemController::class);
+
+    // company post method
+    Route::post('company/{id}/update', [CompanyController::class, 'update']);
+    Route::post('company/{id}/restore', [CompanyController::class, 'restore']);
+
+    // users post method
+    Route::get('/user', [UserController::class, 'currentUser']);
+    Route::post('/logout', [UserController::class, 'logout']);
+    Route::post('/user/{id}/activation', [UserController::class, 'toggleActivation']);
+    Route::post('/user/{id}/update', [UserController::class, 'update']);
+
+    // item post method
+    Route::post('item/{id}/restore', [ItemController::class, 'restore']);
 });
