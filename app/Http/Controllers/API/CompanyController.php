@@ -34,10 +34,16 @@ class CompanyController extends Controller
     {
         // check user permission
         if(!$this->checkUserPermission('view_company')) {
-            return $this->sendError(['error' => 'You do not have permission to view a company'], 400, false);
+            return $this->sendError(['error' => 'You do not have permission to view a company'], 400);
         }
 
-        $company = Company::all();
+        $company = Company::latest()->paginate(10);
+        return $this->sendResponse(CompanyResource::collection($company), 'Companies retrieved successfully');
+    }
+
+    public function showRegisteredCompanies() : JsonResponse
+    {
+        $company = Company::latest()->get();
         return $this->sendResponse(CompanyResource::collection($company), 'Companies retrieved successfully');
     }
 
@@ -93,13 +99,13 @@ class CompanyController extends Controller
     {
         // check user permission
         if(!$this->checkUserPermission('view_company')) {
-            return $this->sendError(['error' => 'You do not have permission to view a company'], 400, false);
+            return $this->sendError(['error' => 'You do not have permission to view a company'], 400);
         }
 
         $company = Company::find($id);
 
         if(is_null($company)) {
-            return $this->sendError(['error' => 'Company does not exist'], 400, false);
+            return $this->sendError(['error' => 'Company does not exist'], 400);
         }
 
         return $this->sendResponse(new CompanyResource($company), 'Company retrieved successfully');
