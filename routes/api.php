@@ -3,6 +3,7 @@
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\API\UserController;
+use App\Http\Controllers\API\AuthController;
 use App\Http\Controllers\API\CompanyController;
 use App\Http\Controllers\API\ItemController;
 
@@ -17,29 +18,47 @@ use App\Http\Controllers\API\ItemController;
 |
 */
 
-// Route::post('register', [UserController::class, 'register']);
-Route::post('login',[UserController::class, 'login']);
-Route::post('register', [UserController::class, 'register']);
-// Route::get('index',  [UserController::class, 'index'])->middleware('auth:api');
-Route::post('/user/{id}/assign_role', [UserController::class, 'assignRole'])->middleware('auth:api');
+
+Route::post('login',[AuthController::class, 'login']);
+Route::post('register', [AuthController::class, 'register']);
 Route::get('/company/view', [CompanyController::class, 'showRegisteredCompanies']);
 
-Route::middleware('auth:api')->group(function () {
-    // api resource
-    Route::apiResource('company', CompanyController::class);
-    Route::apiResource('user', UserController::class);
-    Route::apiResource('item', ItemController::class);
+Route::middleware('auth:api', 'throttle:60,1')->group(function () {
 
-    // company post method
-    Route::post('company/{id}/update', [CompanyController::class, 'update']);
-    Route::post('company/{id}/restore', [CompanyController::class, 'restore']);
+    // prefix for company
+    Route::prefix('company')->group(function() {
+        Route::get('/list', [CompanyController::class, 'index']);
+        Route::get('/{id}/show', [CompanyController::class, 'show']);
+        Route::post('/add', [CompanyController::class, 'store']);
+        Route::post('/{id}/update', [CompanyController::class, 'update']);
+        Route::delete('/{id}/delete', [CompanyController::class, 'destroy']);
+        Route::post('/{id}/restore', [CompanyController::class, 'restore']);
+    });
 
-    // users post method
-    Route::get('/user', [UserController::class, 'currentUser']);
-    Route::post('/logout', [UserController::class, 'logout']);
-    Route::post('/user/{id}/activation', [UserController::class, 'toggleActivation']);
-    Route::post('/user/{id}/update', [UserController::class, 'update']);
+    // prefix for user
+    Route::prefix('user')->group(function() {
+        Route::get('/list', [UserController::class, 'index']);
+        Route::get('/{id}/show', [UserController::class, 'show']);
+        Route::get('/current', [UserController::class, 'currentUser']);
+        Route::post('/add', [UserController::class, 'store']);
+        Route::post('/{id}/update', [UserController::class, 'update']);
+        Route::delete('/{id}/delete', [UserController::class, 'destroy']);
+        Route::post('/{id}/restore', [UserController::class, 'restore']);
+        Route::post('/logout', [AuthController::class, 'logout']);
 
-    // item post method
-    Route::post('item/{id}/restore', [ItemController::class, 'restore']);
+        // super_admin
+        Route::post('/{id}/assign-role', [UserController::class, 'assignRole']);
+        Route::post('/{id}/activation', [UserController::class, 'toggleActivation']);
+    });
+
+    // prefix for item
+    Route::prefix('item')->group(function() {
+        Route::get('/list', [ItemController::class, 'index']);
+        Route::get('/{id}/show', [ItemController::class, 'show']);
+        Route::post('/add', [ItemController::class, 'store']);
+        Route::post('/{id}/update', [ItemController::class, 'update']);
+        Route::delete('/{id}/delete', [ItemController::class, 'destroy']);
+        Route::post('/{id}/restore', [ItemController::class, 'restore']);
+    });
+
 });
