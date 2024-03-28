@@ -33,10 +33,17 @@ class ItemController extends Controller
         return true;
     }
 
-    // view all items depending on the company of the user
     public function index()
     {
-        $items = Item::where('company_id', auth()->user()->company_id)->get();
+        $user = Auth::user();
+        $role = $user->roles->first()->role_name;
+
+        if($role === "super_admin") {
+            $items = Item::latest()->get(); // get all items if the user is a super admin
+        } else {
+            // else view all items depending on the company of the user
+            $items = Item::where('company_id', auth()->user()->company_id)->get();
+        }
 
         if($items->isEmpty()) {
             return $this->sendError(['error' => 'No item found for this user'], 404);
