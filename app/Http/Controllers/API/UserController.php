@@ -45,8 +45,21 @@ class UserController extends Controller
         return $this->sendError(['error' => 'Unauthorized'], 401);
       }
 
-        $user = User::latest()->paginate(10);
-        return response()->json($user->toArray(), 200);
+      $search = request()->query('search');
+      $query = User::query();
+
+      if($search) {
+            $query->where('first_name', 'LIKE', "%{$search}%")
+                ->orWhere('last_name', 'LIKE', "%{$search}%")
+                ->orWhere('email', 'LIKE', "%{$search}%")
+                ->orWhere('phone', 'LIKE', "%{$search}%");
+      }
+
+        $users = $query->with('roles')->latest()->paginate(10);
+        foreach ($users as $user) {
+            $user->append('role_name');
+        }
+        return response()->json($users->toArray(), 200);
     }
 
     public function currentUser () : JsonResponse
