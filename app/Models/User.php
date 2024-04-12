@@ -20,6 +20,10 @@ class User extends Authenticatable
         return $this->belongsToMany(Role::class, 'role_users', 'user_id', 'role_id')->withTimestamps();
     }
 
+    public function getRoleNameAttribute () {
+        return $this->roles->first()->role_name ?? null;
+    }
+
     protected static function boot()
     {
         parent::boot();
