@@ -58,6 +58,31 @@ class ItemController extends Controller
         return $this->sendResponse($items->toArray(), 'Items retrieved successfully');
     }
 
+    public function userItemIndex (int $userId): JsonResponse
+    {
+        $user = Auth::user();
+        if($userId === $user->id) {
+            $itemsPerUser = Item::where('user_id', $userId)->latest()->get();
+            return $this->sendResponse($itemsPerUser->toArray(), 'Items retrieved successfully');
+        } else {
+            return $this->sendError(['error' => 'User not found'], 404);
+        }
+    }
+
+    public function currentUserItem () : JsonResponse
+    {
+        $user = Auth::user();
+        if($user) {
+            $itemsPerUser = Item::where('user_id', $user->id)->latest()->get();
+            if($itemsPerUser->isEmpty()) {
+                return $this->sendError(['error' => 'No item found for this user'], 404);
+            }
+            return $this->sendResponse($itemsPerUser->toArray(), 'Items retrieved successfully');
+        } else {
+            return $this->sendError(['error' => 'User not found'], 404);
+        }
+    }
+
     public function show($id)
     {
         $item = Item::find($id);
@@ -150,7 +175,7 @@ class ItemController extends Controller
         }
     }
 
-    public function destroy (int $itemId) : JsonResponse
+    public function destroy ($itemId) : JsonResponse
     {
         DB::beginTransaction();
 
@@ -171,7 +196,7 @@ class ItemController extends Controller
         }
     }
 
-    public function restore (int $itemId) : JsonResponse
+    public function restore ($itemId) : JsonResponse
     {
         $item = Item::withTrashed()->find($itemId);
 
@@ -181,6 +206,74 @@ class ItemController extends Controller
 
         $item->restore();
         return $this->sendResponse([], 'Item restored successfully');
+    }
+
+    public function currentUserTrashedItems() : JsonResponse
+    {
+        $user = Auth::user();
+        if($user) {
+            $itemsPerUser = Item::onlyTrashed()->where('user_id', $user->id)->latest()->get();
+            if($itemsPerUser->isEmpty()) {
+                return $this->sendError(['error' => 'No item found for this user'], 404);
+            }
+            return $this->sendResponse($itemsPerUser->toArray(), 'Items retrieved successfully');
+        } else {
+            return $this->sendError(['error' => 'User not found'], 404);
+        }
+    }
+
+    public function restoreCurrentUserTrashedItems($itemId) : JsonResponse
+    {
+        $user = Auth::user();
+        if($user) {
+            $item = Item::onlyTrashed()->where('user_id', $user->id)->find($itemId);
+            if(!$item) {
+                return $this->sendError(['error' => 'Item does not exist or does not belong to this user'], 404);
+            }
+            $item->restore();
+            return $this->sendResponse($item->toArray(), 'Item restored successfully');
+        } else {
+            return $this->sendError(['error' => 'User not found'], 404);
+        }
+    }
+
+    public function updateCurrentUserItem(Request $request, $itemId) : JsonResponse
+    {
+        $user = Auth::user();
+        if ($user) {
+            $item = Item::where('user_id', $user->id)->find($itemId);
+            if (!$item) {
+                return $this->sendError(['error' => 'Item does not exist or does not belong to this user'], 404);
+            }
+
+            $validator = Validator::make($request->all(), [
+                'name' => 'max:255|string|unique:items,name,'.$itemId,
+                'description' => 'max:255|string',
+                'quantity' => 'integer',
+                'image' => 'nullable|image|mimes:jpeg,png,jpg,gif,svg|max:2048',
+            ],
+            [
+                'name.unique' => 'The item has been already added',
+            ]);
+
+            if ($validator->fails()) {
+                return $this->sendError(['error' => $validator->errors()], 400);
+            }
+        } else {
+            return $this->sendError(['error' => 'User not found'], 404);
+        }
+
+        DB::beginTransaction();
+
+        try {
+            $item->update($request->all());
+            DB::commit();
+
+            return $this->sendResponse($item->toArray(), 'Item updated successfully');
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return $this->sendError(['error' => $e->getMessage()], 400);
+        }
     }
 
 }
