@@ -23,7 +23,7 @@ Route::post('login',[AuthController::class, 'login']);
 Route::post('register', [AuthController::class, 'register']);
 Route::get('/company/view', [CompanyController::class, 'showRegisteredCompanies']);
 
-Route::middleware('auth:api', 'throttle:60,1')->group(function () {
+Route::middleware('auth:api')->group(function () {
 
     // prefix for company
     Route::prefix('company')->group(function() {
@@ -55,10 +55,15 @@ Route::middleware('auth:api', 'throttle:60,1')->group(function () {
     Route::prefix('item')->group(function() {
         Route::get('/list', [ItemController::class, 'index']);
         Route::get('/{id}/show', [ItemController::class, 'show']);
+        Route::get('/{user_id}/user-items', [ItemController::class, 'userItemIndex']);
+        Route::get('/user/trashed', [ItemController::class, 'currentUserTrashedItems']);
+        Route::get('/user', [ItemController::class, 'CurrentUserItem']);
+        Route::post('/{id}/user/update', [ItemController::class, 'updateCurrentUserItem']);
         Route::post('/add', [ItemController::class, 'store']);
+        Route::post('/{id}/restore', [ItemController::class, 'restore']);
+        Route::post('/{id}/user/restore', [ItemController::class, 'restoreCurrentUserTrashedItems']);
         Route::post('/{id}/update', [ItemController::class, 'update']);
         Route::delete('/{id}/delete', [ItemController::class, 'destroy']);
-        Route::post('/{id}/restore', [ItemController::class, 'restore']);
     });
 
 });
