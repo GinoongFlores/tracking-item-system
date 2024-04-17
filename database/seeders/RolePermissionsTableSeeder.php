@@ -44,6 +44,10 @@ class RolePermissionsTableSeeder extends Seeder
             'view_admin',
             'edit_admin',
             'delete_admin',
+
+            'view_transfer_item',
+            'delete_transfer_item',
+            'restore_transfer_item',
         ])->pluck('id'); // get the ids of the permissions to avoid duplicates
 
          // attach the permission to super admin role without creating duplicates
@@ -66,6 +70,10 @@ class RolePermissionsTableSeeder extends Seeder
             'view_item',
             'delete_item',
             'restore_item',
+
+            'view_transfer_item',
+            'delete_transfer_item',
+            'restore_transfer_item',
         ])->pluck('id');
 
         // attach the permission to admin role
@@ -79,6 +87,11 @@ class RolePermissionsTableSeeder extends Seeder
             'view_item',
             'delete_item',
             'restore_item',
+
+            'transfer_item',
+            'view_transfer_item',
+            'delete_transfer_item',
+            'restore_transfer_item',
         ])->pluck('id');
 
         // attach the permission to user role

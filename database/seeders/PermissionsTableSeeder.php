@@ -60,6 +60,12 @@ class PermissionsTableSeeder extends Seeder
               // admin & user per company
               'view_pending_items',
               'view_approved_items',
+
+              // transfer items
+              'transfer_item',
+              'view_transfer_item',
+              'delete_transfer_item',
+              'restore_transfer_item',
         ];
 
         foreach ($permissions as $permission) {
