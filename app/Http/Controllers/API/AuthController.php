@@ -93,16 +93,6 @@ class AuthController extends Controller
                 $user = User::create($input);
 
                 // attach role
-                // $role = Role::where('role_name', $request->role)->first(); // get role
-
-                // if($role === null) {
-                //     // roll back the transaction in case of an error
-                //     DB::rollback();
-                //     return $this->sendError("Role not found", 400);
-                // }
-
-                // attach role to user
-                // $user->roles()->attach($role->id);
 
                 // attach company to user
                 if(isset($request->company_name)) {
