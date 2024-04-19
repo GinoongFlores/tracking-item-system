@@ -11,6 +11,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Str;
 use App\Models\Role;
 use App\Models\Item;
+use App\Models\TransactionDetail;
 
 class User extends Authenticatable
 {
@@ -43,6 +44,22 @@ class User extends Authenticatable
     public function items()
     {
         return $this->hasMany(Item::class);
+    }
+
+    // transaction details
+    public function sentTransactions()
+    {
+        return $this->hasMany(TransactionDetail::class, 'sender_id');
+    }
+
+    public function receivedTransactions()
+    {
+        return $this->hasMany(TransactionDetail::class, 'receiver_id');
+    }
+
+    public function approvedTransactions()
+    {
+        return $this->hasMany(TransactionDetail::class, 'approved_by');
     }
 
     /**

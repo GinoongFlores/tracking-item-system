@@ -14,10 +14,12 @@ class RolesTableSeeder extends Seeder
      */
     public function run(): void
     {
-        DB::table('roles')->insert([
-            ['role_name' => 'super_admin'],
-            ['role_name' => 'admin'],
-            ['role_name' => 'user'],
-        ]);
+        $roles = ['super_admin', 'admin', 'user'];
+
+        foreach ($roles as $role) {
+            if(!Role::where('role_name', $role)->exists()) {
+                Role::create(['role_name' => $role]);
+            }
+        }
     }
 }

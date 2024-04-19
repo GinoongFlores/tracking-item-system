@@ -39,4 +39,10 @@ class Item extends Model
     {
         return $this->user->company->company_name;
     }
+
+    // item
+    public function transactions()
+    {
+        return $this->belongsToMany(TransactionDetail::class, 'items_transfers', 'item_id', 'transaction_id')->withTimestamps();
+    }
 }

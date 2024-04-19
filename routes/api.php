@@ -6,6 +6,8 @@ use App\Http\Controllers\API\UserController;
 use App\Http\Controllers\API\AuthController;
 use App\Http\Controllers\API\CompanyController;
 use App\Http\Controllers\API\ItemController;
+use App\Http\Controllers\API\TransactionController;
+use App\Http\Controllers\API\AdminController;
 
 /*
 |--------------------------------------------------------------------------
@@ -46,6 +48,9 @@ Route::middleware('auth:api')->group(function () {
         Route::post('/{id}/restore', [UserController::class, 'restore']);
         Route::post('/logout', [AuthController::class, 'logout']);
 
+        // admin
+        Route::get('/admin/list', [AdminController::class, 'indexByCompany']);
+
         // super_admin
         Route::post('/{id}/assign-role', [UserController::class, 'assignRole']);
         Route::post('/{id}/activation', [UserController::class, 'toggleActivation']);
@@ -64,6 +69,10 @@ Route::middleware('auth:api')->group(function () {
         Route::post('/{id}/user/restore', [ItemController::class, 'restoreCurrentUserTrashedItems']);
         Route::post('/{id}/update', [ItemController::class, 'update']);
         Route::delete('/{id}/delete', [ItemController::class, 'destroy']);
+
+        // transfer item
+        Route::post('/transfer', [TransactionController::class, 'transferItem']);
+        Route::get('/view-transactions', [TransactionController::class, 'viewTransactions']);
     });
 
 });

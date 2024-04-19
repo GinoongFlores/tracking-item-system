@@ -59,7 +59,7 @@ class UserController extends Controller
         foreach ($users as $user) {
             $user->append('role_name');
         }
-        return response()->json($users->toArray(), 200);
+        return response()->json($users, 200);
     }
 
     public function currentUser () : JsonResponse
@@ -71,11 +71,15 @@ class UserController extends Controller
         }
 
         $role = $user->roles->first();
+        $company = $user->company;
         $check_role_name = $role ? $role->role_name : null;
+        $check_company_name = $company ? $company->company_name : null;
+
 
         $userData = [
             'first_name' => $user->first_name,
             'role' => $check_role_name,
+            'company' => $check_company_name,
             'email' => $user->email,
             'is_activated' => $user->is_activated,
         ];
