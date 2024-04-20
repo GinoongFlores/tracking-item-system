@@ -67,6 +67,8 @@ class CompanyController extends Controller
 
         $validator = Validator::make($request->all(), [
             'company_name' => 'required|max:255',
+            'company_description' => 'nullable|string|max:255',
+            'address' => 'required|string|max:255',
         ]);
 
         if($validator->fails()) {
@@ -130,6 +132,8 @@ class CompanyController extends Controller
 
         $validator = Validator::make($request->all(), [
             'company_name' => 'required|max:255',
+            'company_description' => 'nullable|string|max:255',
+            'address' => 'required|string|max:255',
         ]);
 
         if($validator->fails()) {

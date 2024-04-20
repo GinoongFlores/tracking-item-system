@@ -71,6 +71,8 @@ class RolePermissionsTableSeeder extends Seeder
             'delete_item',
             'restore_item',
 
+            'approve_item',
+            'reject_item',
             'view_transfer_item',
             'delete_transfer_item',
             'restore_transfer_item',
