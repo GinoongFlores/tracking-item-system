@@ -62,6 +62,22 @@ class UserController extends Controller
         return response()->json($users, 200);
     }
 
+    public function searchUser(Request $request) : JsonResponse
+    {
+        $query = $request->get('query');
+        $currentUser = Auth::user();
+
+        $users = User::where('id', '!=', $currentUser->id)
+        ->where(function ($q) use ($query) {
+            $q->where('first_name', 'like', "%{$query}%")
+            ->orWhere('last_name', 'like', "%{$query}%")
+            ->orWhere('email', 'like', "%{$query}%")
+            ->orWhere(DB::raw("CONCAT(first_name, ' ', last_name)"), 'like', "%{$query}%");
+        })->select('id', 'first_name', 'last_name', 'email')->get();
+
+        return $this->sendResponse($users->toArray(), '');
+    }
+
     public function currentUser () : JsonResponse
     {
         $user = Auth::user();
