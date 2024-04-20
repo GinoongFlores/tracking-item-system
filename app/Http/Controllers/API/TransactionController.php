@@ -10,6 +10,8 @@ use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Auth;
 use App\Models\Company;
+use App\Models\User;
+use Illuminate\Contracts\Support\ValidatedData;
 
 class TransactionController extends Controller
 
@@ -29,6 +31,8 @@ class TransactionController extends Controller
     - sender's id
     - receiver's id
     - company_id
+    - address_from
+    - address_to
   * item_transfers pivot table
     - transaction_id from transaction_details
     - item_id from items
@@ -72,6 +76,8 @@ class TransactionController extends Controller
             'receiver_id' => 'required|exists:users,id',
             'item_ids' => 'required|array',
             'items_ids.*' => 'exists:items,id',
+            'address_from' => 'sometimes|string|max:255',
+            'address_to' => 'sometimes|string|max:255',
         ]);
 
         if($validator->fails()) {
@@ -87,16 +93,21 @@ class TransactionController extends Controller
             $transaction->sender_id = auth()->user()->id;
             $transaction->company_id = auth()->user()->company_id;
             $transaction->receiver_id = $validatedData['receiver_id'];
-            $transaction->status = "Pending";
+
+            // If address is not provided (sender and receiver) in the request, use the company's address
+            $address_from = $validatedData['address_from'] ?? auth()->user()->company->address;
+            $transaction->address_from = $address_from;
+
+            $address_to = $validatedData['address_to'] ?? User::find($validatedData['receiver_id'])->company->address;
+            $transaction->address_to = $address_to;
 
             $transaction->save();
+            // dd($transaction);
 
             // Loop through the array of item Ids and attach each on to the transaction
             foreach ($validatedData['item_ids'] as $itemId) {
                 $transaction->items()->attach($itemId);
             }
-
-            // check if the item is already in a transaction
 
             DB::commit();
 
@@ -117,31 +128,33 @@ class TransactionController extends Controller
 
         $companyId = auth()->user()->company_id;
         $company  = Company::find($companyId);
-        $transactions = $company->transactionDetails;
+        $transactions = $company->transactionDetails()->latest()->get();
 
         if(!$transactions) {
             return $this->sendError(['error' => 'No transactions found on this user'], 400);
         }
 
         $transactions = $transactions->map(function ($transaction) {
-            $itemNames = $transaction->items->map(function ($item) {
-                return $item->name;
-            })->toArray();
-
-            $itemDescriptions = $transaction->items->map(function ($item) {
-                return $item->description;
+            $items = $transaction->items->map(function ($item) {
+                $approver = User::find($item->pivot->approved_by);
+                $approverName = $approver ? $approver->first_name : null;
+                return [
+                    'name' => $item->name,
+                    'description' => $item->description,
+                    'status' => $item->pivot->status,
+                    'approved_by' => $approverName,
+                    'approved_at' => $item->pivot->approved_at,
+                ];
             })->toArray();
 
             return [
                 'id' => $transaction->id,
-                // 'sender_name' => $transaction->sender->first_name . ' ' . $transaction->sender->last_name,
                 'sender_name' => $transaction->sender->first_name,
-                'item_name' => $itemNames, // array of item names
-                'item_description' => $itemDescriptions,
-                'status' => $transaction->status,
-                'approved_at' => $transaction->approver,
+                'receiver_name' => $transaction->receiver->first_name,
+                'address_from' => $transaction->address_from,
+                'address_to' => $transaction->address_to,
+                'items' => $items, // array of item names
             ];
-
         });
 
         return $this->sendResponse($transactions->toArray(), 'Transactions retrieved successfully');
@@ -154,36 +167,72 @@ class TransactionController extends Controller
         }
 
         $userId = auth()->user()->id;
-        $transactions = TransactionDetail::where('sender_id', $userId)->get();
+        $transactions = TransactionDetail::where('sender_id', $userId)->latest()->get();
 
         if(!$transactions) {
             return $this->sendError(['error' => 'No transactions found on this user'], 400);
         }
 
         $transactions = $transactions->map(function ($transaction) {
-            $itemNames = $transaction->items->map(function ($item) {
-                return $item->name;
-            })->toArray();
-
-            $itemDescriptions = $transaction->items->map(function ($item) {
-                return $item->description;
+            $items = $transaction->items->map(function ($item) {
+                $approver = User::find($item->pivot->approved_by);
+                $approverName = $approver ? $approver->first_name : null;
+                return [
+                    'name' => $item->name,
+                    'description' => $item->description,
+                    'status' => $item->pivot->status,
+                    'approved_by' => $approverName,
+                    'approved_at' => $item->pivot->approved_at,
+                ];
             })->toArray();
 
             return [
                 'id' => $transaction->id,
                 'sender_name' => $transaction->sender->first_name,
-                'item_name' => $itemNames, // array of item names
-                'item_description' => $itemDescriptions,
-                'status' => $transaction->status,
-                'approved_at' => $transaction->approver,
+                'receiver_name' => $transaction->receiver->first_name,
+                'address_from' => $transaction->address_from,
+                'address_to' => $transaction->address_to,
+                'items' => $items, // array of item names
             ];
         });
 
         return $this->sendResponse($transactions->toArray(), 'Transactions retrieved successfully');
     }
 
-    public function approveTransaction($transactionId)
+    public function transactionStatus(Request $request, $transactionId)
     {
+        if(!$this->checkUserPermission(['approve_item'], ['admin'])) {
+            return $this->sendError(['error' => 'You do not have permission to approve transactions'], 400);
+        }
 
+        $validator = Validator::make($request->all(), [
+            'status' => 'required|in:approved,rejected,canceled,pending',
+        ]);
+
+        if($validator->fails()) {
+            return $this->sendError(['error' => $validator->errors()], 400);
+        }
+
+        $validatedData = $validator->validated();
+
+        $transaction = TransactionDetail::find($transactionId);
+        if(!$transaction) {
+            return $this->sendError(['error' => 'Transaction not found'], 400);
+        }
+
+        // check if the transaction belongs to the same company as the admin
+        if($transaction->company_id !== auth()->user()->company_id) {
+            return $this->sendError(['error' => 'You do not have permission to approve transactions'], 400);
+        }
+
+        // update the status of each item in the transaction
+        foreach ($transaction->items as $item) {
+            $item->pivot->status = $validatedData['status'];
+            $item->pivot->approved_by = auth()->user()->id;
+            $item->pivot->approved_at = now();
+            $item->pivot->save();
+        }
+
+        return $this->sendResponse($transaction->load('items')->toArray(), 'Transaction status updated successfully');
     }
 }

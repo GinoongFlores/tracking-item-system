@@ -72,6 +72,7 @@ Route::middleware('auth:api')->group(function () {
 
         // transfer item
         Route::post('/transfer', [TransactionController::class, 'transferItem']);
+        Route::post('/transfer/{id}/status', [TransactionController::class, 'transactionStatus']);
         Route::get('/admin/view-transactions', [TransactionController::class, 'viewTransactionsPerAdmin']);
         Route::get('/user/view-transactions', [TransactionController::class, 'viewTransactionsPerUser']);
     });

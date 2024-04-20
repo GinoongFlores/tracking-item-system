@@ -12,11 +12,9 @@ class TransactionDetail extends Model
     protected $fillable = [
         'sender_id',
         'receiver_id',
-        'item_id',
-        'approved_by',
-        'status',
         'company_id',
-        'approved_at',
+        'address_to',
+        'address_from',
     ];
 
     protected $table = 'transaction_details';
@@ -31,11 +29,6 @@ class TransactionDetail extends Model
         return $this->belongsTo(User::class, 'receiver_id');
     }
 
-    public function approver()
-    {
-        return $this->belongsTo(User::class, 'approved_by');
-    }
-
     public function company()
     {
         return $this->belongsTo(Company::class);
@@ -43,6 +36,6 @@ class TransactionDetail extends Model
 
     public function items()
     {
-        return $this->belongsToMany(Item::class, 'item_transfers', 'transaction_id', 'item_id')->withTimestamps();
+        return $this->belongsToMany(Item::class, 'item_transfers', 'transaction_id', 'item_id')->withPivot('status', 'approved_by', 'approved_at')->withTimestamps();
     }
 }
