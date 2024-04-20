@@ -22,6 +22,25 @@ class TransactionController extends Controller
  * View all transactions - working
 
 */
+
+/*
+ * Objective
+ * transaction_details table
+    - sender's id
+    - receiver's id
+    - company_id
+  * item_transfers pivot table
+    - transaction_id from transaction_details
+    - item_id from items
+    - status
+    - approved_by
+    - approved_at
+  * Use cases
+  - users can send one ore more items to another user
+  - a transaction could have one or more items
+  - an admin can approved or reject a transaction through status
+
+*/
 {
 
     private function checkUserPermission (array $permissionNames, array $userRole = ['admin', 'user'])
@@ -89,9 +108,9 @@ class TransactionController extends Controller
         }
     }
 
-    public function viewTransactions()
+    public function viewTransactionsPerAdmin()
     {
-        if(!$this->checkUserPermission(['view_transfer_item'], ['admin']))
+        if(!$this->checkUserPermission(['view_transfer_item'], ['admin', 'user']))
         {
             return $this->sendError(['error' => 'You do not have permission to view transactions'], 400);
         }
@@ -105,16 +124,59 @@ class TransactionController extends Controller
         }
 
         $transactions = $transactions->map(function ($transaction) {
+            $itemNames = $transaction->items->map(function ($item) {
+                return $item->name;
+            })->toArray();
+
+            $itemDescriptions = $transaction->items->map(function ($item) {
+                return $item->description;
+            })->toArray();
+
             return [
                 'id' => $transaction->id,
                 // 'sender_name' => $transaction->sender->first_name . ' ' . $transaction->sender->last_name,
                 'sender_name' => $transaction->sender->first_name,
-                'item_name' => $transaction->items->name,
-                'item_description' => $transaction->item->description,
+                'item_name' => $itemNames, // array of item names
+                'item_description' => $itemDescriptions,
                 'status' => $transaction->status,
                 'approved_at' => $transaction->approver,
             ];
 
+        });
+
+        return $this->sendResponse($transactions->toArray(), 'Transactions retrieved successfully');
+    }
+
+    public function viewTransactionsPerUser()
+    {
+        if(!$this->checkUserPermission(['view_transfer_item'], ['user'])) {
+            return $this->sendError(['error' => 'You do not have permission to view transactions'], 400);
+        }
+
+        $userId = auth()->user()->id;
+        $transactions = TransactionDetail::where('sender_id', $userId)->get();
+
+        if(!$transactions) {
+            return $this->sendError(['error' => 'No transactions found on this user'], 400);
+        }
+
+        $transactions = $transactions->map(function ($transaction) {
+            $itemNames = $transaction->items->map(function ($item) {
+                return $item->name;
+            })->toArray();
+
+            $itemDescriptions = $transaction->items->map(function ($item) {
+                return $item->description;
+            })->toArray();
+
+            return [
+                'id' => $transaction->id,
+                'sender_name' => $transaction->sender->first_name,
+                'item_name' => $itemNames, // array of item names
+                'item_description' => $itemDescriptions,
+                'status' => $transaction->status,
+                'approved_at' => $transaction->approver,
+            ];
         });
 
         return $this->sendResponse($transactions->toArray(), 'Transactions retrieved successfully');
