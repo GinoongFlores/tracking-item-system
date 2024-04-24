@@ -15,6 +15,7 @@ class TransactionDetail extends Model
         'company_id',
         'address_to',
         'address_from',
+        'message',
     ];
 
     protected $table = 'transaction_details';

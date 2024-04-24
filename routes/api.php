@@ -54,15 +54,18 @@ Route::middleware('auth:api')->group(function () {
         // super_admin
         Route::post('/{id}/assign-role', [UserController::class, 'assignRole']);
         Route::post('/{id}/activation', [UserController::class, 'toggleActivation']);
+
+        // transfer user
+        Route::get('/search', [UserController:: class, 'searchUser']);
     });
 
     // prefix for item
     Route::prefix('item')->group(function() {
         Route::get('/list', [ItemController::class, 'index']);
         Route::get('/{id}/show', [ItemController::class, 'show']);
-        Route::get('/{user_id}/user-items', [ItemController::class, 'userItemIndex']);
+        // Route::get('/items', [ItemController::class, 'userItemIndex']);
         Route::get('/user/trashed', [ItemController::class, 'currentUserTrashedItems']);
-        Route::get('/user', [ItemController::class, 'CurrentUserItem']);
+        // Route::get('/user', [ItemController::class, 'CurrentUserItem']);
         Route::post('/{id}/user/update', [ItemController::class, 'updateCurrentUserItem']);
         Route::post('/add', [ItemController::class, 'store']);
         Route::post('/{id}/restore', [ItemController::class, 'restore']);
@@ -75,6 +78,7 @@ Route::middleware('auth:api')->group(function () {
         Route::post('/transfer/{id}/status', [TransactionController::class, 'transactionStatus']);
         Route::get('/admin/view-transactions', [TransactionController::class, 'viewTransactionsPerAdmin']);
         Route::get('/user/view-transactions', [TransactionController::class, 'viewTransactionsPerUser']);
+        Route::get('/search', [ItemController::class, 'searchItem']);
     });
 
 });
