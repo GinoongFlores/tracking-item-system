@@ -37,8 +37,17 @@ class CompanyController extends Controller
             return $this->sendError(['error' => 'You do not have permission to view a company'], 400);
         }
 
-        $company = Company::latest()->paginate(10);
-        return $this->sendResponse(CompanyResource::collection($company), 'Companies retrieved successfully');
+        $search = request()->query('search');
+        $query = Company::query();
+
+        if($search) {
+            $query->where('company_name', 'LIKE', "%{$search}%")
+                ->orWhere('company_description', 'LIKE', "%{$search}%")
+                ->orWhere('address', 'LIKE', "%{$search}%");
+        }
+
+        $companies = $query->latest()->paginate(10);
+        return response()->json($companies, 200);
     }
 
     public function showRegisteredCompanies() : JsonResponse
