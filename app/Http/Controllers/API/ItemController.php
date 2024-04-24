@@ -49,38 +49,21 @@ class ItemController extends Controller
             return $this->sendError(['error' => 'No item found for this user'], 404);
         }
 
-        // add company name to the items
-        // $items = $items->map(function ($item) {
-        //     $item->company_name = $item->getCompanyName();
-        //     return $item;
-        // });
-
         return $this->sendResponse($items->toArray(), 'Items retrieved successfully');
     }
 
-    public function userItemIndex (int $userId): JsonResponse
-    {
-        $user = Auth::user();
-        if($userId === $user->id) {
-            $itemsPerUser = Item::where('user_id', $userId)->latest()->get();
-            return $this->sendResponse($itemsPerUser->toArray(), 'Items retrieved successfully');
-        } else {
-            return $this->sendError(['error' => 'User not found'], 404);
-        }
-    }
 
-    public function currentUserItem () : JsonResponse
+    public function searchItem(Request $request)
     {
         $user = Auth::user();
-        if($user) {
-            $itemsPerUser = Item::where('user_id', $user->id)->latest()->get();
-            if($itemsPerUser->isEmpty()) {
-                return $this->sendError(['error' => 'No item found for this user'], 404);
-            }
-            return $this->sendResponse($itemsPerUser->toArray(), 'Items retrieved successfully');
-        } else {
-            return $this->sendError(['error' => 'User not found'], 404);
-        }
+
+        $items = Item::where('company_id', $user->company_id)
+        ->where(function ($query) use ($request) {
+            $query->where('name', 'LIKE', "%{$request->get('query')}%")
+            ->orWhere('description', 'LIKE', "%{$request->get('query')}%");
+        })->select('id', 'name', 'description', 'quantity', 'image')->get();
+
+        return $this->sendResponse($items->toArray(), '');
     }
 
     public function show($id)
