@@ -76,8 +76,9 @@ class TransactionController extends Controller
             'receiver_id' => 'required|exists:users,id',
             'item_ids' => 'required|array',
             'items_ids.*' => 'exists:items,id',
-            'address_from' => 'sometimes|string|max:255',
-            'address_to' => 'sometimes|string|max:255',
+            'address_from' => 'sometimes|max:255',
+            'address_to' => 'sometimes|max:255',
+            'message' => 'nullable|string|max:255',
         ]);
 
         if($validator->fails()) {
@@ -93,12 +94,16 @@ class TransactionController extends Controller
             $transaction->sender_id = auth()->user()->id;
             $transaction->company_id = auth()->user()->company_id;
             $transaction->receiver_id = $validatedData['receiver_id'];
+            $transaction->message = $validatedData['message'];
 
             // If address is not provided (sender and receiver) in the request, use the company's address
             $address_from = $validatedData['address_from'] ?? auth()->user()->company->address;
             $transaction->address_from = $address_from;
 
             $address_to = $validatedData['address_to'] ?? User::find($validatedData['receiver_id'])->company->address;
+            if(!$address_to) {
+                return $this->sendError(['error' => 'No company address, Please add a receiver address'], 400);
+            }
             $transaction->address_to = $address_to;
 
             $transaction->save();
@@ -149,8 +154,8 @@ class TransactionController extends Controller
 
             return [
                 'id' => $transaction->id,
-                'sender_name' => $transaction->sender->first_name,
-                'receiver_name' => $transaction->receiver->first_name,
+                'sender_full_name' => $transaction->sender->first_name . ' ' . $transaction->sender->last_name,
+                'receiver_full_name' => $transaction->sender->first_name . ' ' . $transaction->sender->last_name,
                 'address_from' => $transaction->address_from,
                 'address_to' => $transaction->address_to,
                 'items' => $items, // array of item names
@@ -174,10 +179,11 @@ class TransactionController extends Controller
         }
 
         $transactions = $transactions->map(function ($transaction) {
-            $items = $transaction->items->map(function ($item) {
+            $items = $transaction->items->map(function ($item) use ($transaction) {
                 $approver = User::find($item->pivot->approved_by);
                 $approverName = $approver ? $approver->first_name : null;
                 return [
+                    'transaction_id' => $transaction->id,
                     'name' => $item->name,
                     'description' => $item->description,
                     'status' => $item->pivot->status,
@@ -188,8 +194,8 @@ class TransactionController extends Controller
 
             return [
                 'id' => $transaction->id,
-                'sender_name' => $transaction->sender->first_name,
-                'receiver_name' => $transaction->receiver->first_name,
+                'sender_full_name' => $transaction->sender->first_name . ' ' . $transaction->sender->last_name,
+                'receiver_full_name' => $transaction->receiver->first_name . ' ' . $transaction->receiver->last_name,
                 'address_from' => $transaction->address_from,
                 'address_to' => $transaction->address_to,
                 'items' => $items, // array of item names
@@ -206,7 +212,7 @@ class TransactionController extends Controller
         }
 
         $validator = Validator::make($request->all(), [
-            'status' => 'required|in:approved,rejected,canceled,pending',
+            'status' => 'required|in:approved,rejected,canceled,pending,delivered',
         ]);
 
         if($validator->fails()) {
