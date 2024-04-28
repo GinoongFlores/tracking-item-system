@@ -11,6 +11,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Auth;
 use App\Models\Company;
 use App\Models\User;
+use App\Models\Item;
 use Illuminate\Contracts\Support\ValidatedData;
 
 class TransactionController extends Controller
@@ -172,13 +173,28 @@ class TransactionController extends Controller
         }
 
         $userId = auth()->user()->id;
-        $transactions = TransactionDetail::where('sender_id', $userId)->latest()->get();
+
+        // search
+        $query = TransactionDetail::where('sender_id', $userId);
+        $search = request()->query('search');
+
+        if($search) {
+            $query->where(function($query) use ($search) {
+                $query->where('address_from', "like", "%{$search}%")->orWhere('address_to', 'like', "%{$search}%")
+                ->orWhere('message', 'like', "%{$search}%")
+                ->orWhereHas('items', function($query) use ($search) {
+                    $query->where('name', 'like', "%{$search}%")->orWhere('description', 'like', "%{$search}%");
+                });
+            });
+        }
+
+      $transactions = $query->latest()->paginate(10);
 
         if(!$transactions) {
             return $this->sendError(['error' => 'No transactions found on this user'], 400);
         }
 
-        $transactions = $transactions->map(function ($transaction) {
+        $transactions->getCollection()->transform(function ($transaction) {
             $items = $transaction->items->map(function ($item) use ($transaction) {
                 $approver = User::find($item->pivot->approved_by);
                 $approverName = $approver ? $approver->first_name : null;
@@ -202,7 +218,7 @@ class TransactionController extends Controller
             ];
         });
 
-        return $this->sendResponse($transactions->toArray(), 'Transactions retrieved successfully');
+        return response()->json($transactions, 200);
     }
 
     public function transactionStatus(Request $request, $transactionId)
