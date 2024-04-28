@@ -47,13 +47,16 @@ class AdminController extends Controller
         $search = request()->query('search');
         $companyId = auth()->user()->company_id;
         $currentUserId = auth()->user()->id;
+        // fetch all users in the company except the current user
         $query = User::where('company_id', $companyId)->where('id', '!=', $currentUserId);
 
         if($search) {
-            $query->where('first_name', 'LIKE', "%{$search}%")
-            ->orWhere('last_name', 'LIKE', "%{$search}%")
-            ->orWhere('email', 'LIKE', "%{$search}%")
-            ->orWhere('phone', 'LIKE', "%{$search}%");
+            $query->where(function ($query) use ($search) {
+                $query->where('first_name', 'LIKE', "%{$search}%")
+                ->orWhere('last_name', 'LIKE', "%{$search}%")
+                ->orWhere('email', 'LIKE', "%{$search}%")
+                ->orWhere('phone', 'LIKE', "%{$search}%");
+            });
         }
 
         $users = $query->with('roles')->latest()->paginate(10);
