@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "50364363e22f422ac6ffb55cefb2eb94",
+    "content-hash": "6431f93ed1dce959e2e31f9fb9ac1a24",
     "packages": [
         {
             "name": "brick/math",
@@ -6915,6 +6915,70 @@
                 "source": "https://github.com/tijsverkoyen/CssToInlineStyles/tree/v2.2.7"
             },
             "time": "2023-12-08T13:03:43+00:00"
+        },
+        {
+            "name": "uploadcare/uploadcare-php",
+            "version": "v4.2.0",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/uploadcare/uploadcare-php.git",
+                "reference": "9a1300fe20abf86f765684c739145ed5e5c5e982"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/uploadcare/uploadcare-php/zipball/9a1300fe20abf86f765684c739145ed5e5c5e982",
+                "reference": "9a1300fe20abf86f765684c739145ed5e5c5e982",
+                "shasum": ""
+            },
+            "require": {
+                "ext-curl": "*",
+                "ext-json": "*",
+                "guzzlehttp/guzzle": "^7.5",
+                "guzzlehttp/psr7": "^2.4",
+                "php": ">=7.4 || >=8.0",
+                "symfony/polyfill-php80": "^1.26",
+                "symfony/polyfill-uuid": "^1.26"
+            },
+            "require-dev": {
+                "fakerphp/faker": "^1.20",
+                "friendsofphp/php-cs-fixer": "^3.11",
+                "phpunit/phpunit": "^9.5",
+                "symfony/dotenv": "^5.4",
+                "symfony/var-dumper": "^5.4",
+                "vimeo/psalm": "^4.27"
+            },
+            "type": "library",
+            "autoload": {
+                "psr-4": {
+                    "Uploadcare\\": "./src/"
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "MIT"
+            ],
+            "authors": [
+                {
+                    "name": "Uploadcare, Inc",
+                    "email": "hello@uploadcare.com"
+                }
+            ],
+            "description": "Uploadcare PHP integration handles uploads and further operations with files by wrapping Upload and REST APIs.",
+            "homepage": "https://uploadcare.com",
+            "keywords": [
+                "cdn",
+                "cloud",
+                "files",
+                "image management",
+                "upload",
+                "uploadcare"
+            ],
+            "support": {
+                "email": "help@uploadcare.com",
+                "issues": "https://github.com/uploadcare/uploadcare-php/issues",
+                "source": "https://github.com/uploadcare/uploadcare-php/tree/v4.2.0"
+            },
+            "time": "2023-11-09T20:54:50+00:00"
         },
         {
             "name": "vlucas/phpdotenv",

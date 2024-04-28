@@ -5,6 +5,9 @@ use Illuminate\Support\ServiceProvider;
 
 return [
 
+    'uploadcare_public' => env("UPLOADCARE_PUBLIC_KEY"),
+    'uploadcare_secret' => env("UPLOADCARE_SECRET_KEY"),
+
     /*
     |--------------------------------------------------------------------------
     | Application Name

@@ -11,7 +11,8 @@
         "laravel/framework": "^10.10",
         "laravel/passport": "^11.10",
         "laravel/sanctum": "^3.3",
-        "laravel/tinker": "^2.8"
+        "laravel/tinker": "^2.8",
+        "uploadcare/uploadcare-php": "^4.2"
     },
     "require-dev": {
         "fakerphp/faker": "^1.9.1",
