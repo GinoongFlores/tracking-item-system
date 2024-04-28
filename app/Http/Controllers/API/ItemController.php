@@ -38,18 +38,25 @@ class ItemController extends Controller
         $user = Auth::user();
         $role = $user->roles->first()->role_name;
 
-        if($role === "super_admin") {
-            $items = Item::latest()->get(); // get all items if the user is a super admin
-        } else {
-            // else view all items depending on the company of the user
-            $items = Item::where('company_id', auth()->user()->company_id)->get();
+        $query = Item::query();
+        if($role !== "super_admin") {
+            // If the user is not a super admin, only fetch items from their company
+            $query->where('company_id', $user->company_id);
         }
 
-        if($items->isEmpty()) {
-            return $this->sendError(['error' => 'No item found for this user'], 404);
-        }
+        $search = request()->query('search');
 
-        return $this->sendResponse($items->toArray(), 'Items retrieved successfully');
+        if($search) {
+                $query->where('name', 'LIKE', "%{$search}%")
+                    ->orWhere('description', 'LIKE', "%{$search}%");
+            }
+
+        $items = $query->latest()->paginate(10);
+        // if($items->isEmpty()) {
+        //     return $this->sendError(['error' => 'No item found for this user'], 404);
+        // }
+
+      return response()->json($items, 200);
     }
 
 
@@ -88,7 +95,7 @@ class ItemController extends Controller
             'name' => 'required|max:255|string|unique:items,name',
             'description' => 'required|max:255|string',
             'quantity' => 'required|integer',
-            'image' => 'nullable|image|mimes:jpeg,png,jpg,gif,svg|max:2048',
+            'image' => 'nullable|string',
         ],
         [
             'name.unique' => 'The item has been already added',
@@ -103,6 +110,11 @@ class ItemController extends Controller
             $input = $request->all();
             $input['user_id'] = auth()->id(); // add the user_id to the input array
             $input['company_id'] = auth()->user()->company_id;
+
+            // if an image was uploaded, save the uuid
+            if($request->has('image')) {
+                $input['image'] = $request->input('image');
+            }
 
             $item = Item::create($input);
             DB::commit();
