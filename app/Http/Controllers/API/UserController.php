@@ -46,7 +46,8 @@ class UserController extends Controller
       }
 
       $search = request()->query('search');
-      $query = User::query();
+      $currentUserId = auth()->user()->id;
+      $query = User::query()->where('id', '!=', $currentUserId);
 
       if($search) {
             $query->where('first_name', 'LIKE', "%{$search}%")
@@ -55,7 +56,14 @@ class UserController extends Controller
                 ->orWhere('phone', 'LIKE', "%{$search}%");
       }
 
-        $users = $query->with('roles')->latest()->paginate(10);
+        $users = $query->with([
+            'roles' => function ($query) {
+            $query->select('id', 'role_name');
+        }, 'company' => function ($query) {
+            $query->select('id', 'company_name');
+        }
+        ])->latest()->paginate(10);
+
         foreach ($users as $user) {
             $user->append('role_name');
         }
