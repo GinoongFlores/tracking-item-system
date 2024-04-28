@@ -194,8 +194,11 @@ class TransactionController extends Controller
             return $this->sendError(['error' => 'No transactions found on this user'], 400);
         }
 
-        $transactions->getCollection()->transform(function ($transaction) {
-            $items = $transaction->items->map(function ($item) use ($transaction) {
+        $transactions->getCollection()->transform(function ($transaction) use ($search) {
+            $items = $transaction->items->filter(function ($item) use ($search) {
+                // Only include the item if its name or description matches the search query/term
+                return stripos($item->name, $search) !== false || stripos($item->description, $search) !== false;
+            })->map(function ($item) use ($transaction) {
                 $approver = User::find($item->pivot->approved_by);
                 $approverName = $approver ? $approver->first_name : null;
                 return [
