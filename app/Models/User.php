@@ -22,7 +22,7 @@ class User extends Authenticatable
     }
 
     public function getRoleNameAttribute () {
-        return $this->roles->first()->role_name ?? null;
+        return $this->roles()->first()->role_name ?? null;
     }
 
     protected static function boot()
@@ -85,6 +85,7 @@ class User extends Authenticatable
     protected $hidden = [
         'password',
         'remember_token',
+        'roles',
     ];
 
     /**
