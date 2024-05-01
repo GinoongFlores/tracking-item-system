@@ -78,6 +78,7 @@ Route::middleware('auth:api')->group(function () {
         Route::post('/transfer/{id}/status', [TransactionController::class, 'transactionStatus']);
         Route::get('/admin/view-transactions', [TransactionController::class, 'viewTransactionsPerAdmin']);
         Route::get('/user/view-transactions', [TransactionController::class, 'viewTransactionsPerUser']);
+        Route::get('/received/view-transactions', [TransactionController::class, 'viewTransactionsForReceiver']);
         Route::get('/search', [ItemController::class, 'searchItem']);
     });
 
