@@ -169,6 +169,7 @@ class TransactionController extends Controller
                 $approverName = $approver ? $approver->first_name : null;
                 return [
                     'transaction_id' => $transaction->id,
+                    'item_id' => $item->id,
                     'name' => $item->name,
                     'quantity' => $item->quantity,
                     'description' => $item->description,
@@ -234,6 +235,7 @@ class TransactionController extends Controller
                 $approverName = $approver ? $approver->first_name : null;
                 return [
                     'transaction_id' => $transaction->id,
+                    'item_id' => $item->id,
                     'name' => $item->name,
                     'description' => $item->description,
                     'status' => $item->pivot->status,
@@ -296,6 +298,7 @@ class TransactionController extends Controller
                 $approverName = $approver ? $approver->first_name : null;
                 return [
                     'transaction_id' => $transaction->id,
+                    'item_id' => $item->id,
                     'name' => $item->name,
                     'description' => $item->description,
                     'status' => $item->pivot->status,
@@ -352,6 +355,51 @@ class TransactionController extends Controller
             $item->pivot->approved_at = now();
             $item->pivot->save();
         }
+
+        return $this->sendResponse($transaction->load('items')->toArray(), 'Transaction status updated successfully');
+    }
+
+    public function userAcceptItemStatus(Request $request, $transactionId, $itemId)
+    {
+        if(!$this->checkUserPermission(['accept_item'], ['user'])) {
+            return $this->sendError(['error' => 'You do not have permission to approve transactions'], 400);
+        }
+
+        $validator = Validator::make($request->all(), [
+            'status' => 'required|in:received',
+        ]);
+
+        if($validator->fails()) {
+            return $this->sendError(['error' => $validator->errors()], 400);
+        }
+
+        $validatedData = $validator->validated();
+
+        $transaction = TransactionDetail::find($transactionId);
+        if(!$transaction) {
+            return $this->sendError(['error' => 'Transaction not found'], 400);
+        }
+
+        // check if the transaction belongs to same user
+        if($transaction->receiver_id !== auth()->user()->id) {
+            return $this->sendError(['error' => 'You do not have permission to accept this item'], 400);
+        }
+
+        // find the item within the transaction
+        $item = $transaction->items->find($itemId);
+        if(!$item) {
+            return $this->sendError(['error' => 'Item not found in the transaction'], 400);
+        }
+
+        // check if the item is in a state that can be accepted
+        if($item->pivot->status !== 'delivered' && $item->pivot->status !== 'approved') {
+            return $this->sendError(['error' => 'Item cannot be accepted in its current state'], 400);
+        }
+
+        // update the status of the item
+        $item->pivot->status = $validatedData['status'];
+        $item->pivot->received_at = now();
+        $item->pivot->save();
 
         return $this->sendResponse($transaction->load('items')->toArray(), 'Transaction status updated successfully');
     }
