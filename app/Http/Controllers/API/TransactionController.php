@@ -25,9 +25,9 @@ class TransactionController extends Controller
 /*
  ? Objective
  * Transfer an item from one user to another user - done
- * Remove the item once the transaction is approved - working
+ * Remove the item once the transaction is approved - not started
  * Approve the transaction - done
- * Reject the transaction - working
+ * Reject the transaction - done
  * View all transactions - done
 
 */
@@ -401,6 +401,25 @@ class TransactionController extends Controller
         $item->pivot->received_at = now();
         $item->pivot->save();
 
-        return $this->sendResponse($transaction->load('items')->toArray(), 'Transaction status updated successfully');
+            // Prepare the response
+        $transaction = $transaction->load('items')->toArray();
+        $transaction['items'] = array_map(function ($item) use ($transaction) {
+            $approver = User::find($item['pivot']['approved_by']);
+            $approverName = $approver ? $approver->first_name : null;
+            return [
+                'transaction_id' => $transaction['id'],
+                'item_id' => $item['id'],
+                'name' => $item['name'],
+                'description' => $item['description'],
+                'status' => $item['pivot']['status'],
+                'approved_by' => $approverName,
+                'approved_at' => $item['pivot']['approved_at'],
+                'updated_at' => $item['pivot']['updated_at'],
+                'image' => $item['image'],
+            ];
+        }, $transaction['items']);
+
+
+        return $this->sendResponse($transaction, 'Transaction status updated successfully');
     }
 }
