@@ -39,9 +39,12 @@ class ItemController extends Controller
         $role = $user->roles->first()->role_name;
 
         $query = Item::query();
-        if($role !== "super_admin") {
-            // If the user is not a super admin, only fetch items from their company
+        if ($role === "admin") {
+            // if the user is an admin, only fetch items from their company
             $query->where('company_id', $user->company_id);
+        } elseif ($role === "user") {
+            // if the user is a user, only fetch items created by them
+            $query->where('user_id', $user->id);
         }
 
         $search = request()->query('search');
@@ -52,9 +55,6 @@ class ItemController extends Controller
             }
 
         $items = $query->latest()->paginate(10);
-        // if($items->isEmpty()) {
-        //     return $this->sendError(['error' => 'No item found for this user'], 404);
-        // }
 
       return response()->json($items, 200);
     }
