@@ -94,6 +94,7 @@ class RolePermissionsTableSeeder extends Seeder
             'view_transfer_item',
             'delete_transfer_item',
             'restore_transfer_item',
+            'accept_item',
         ])->pluck('id');
 
         // attach the permission to user role

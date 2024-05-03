@@ -54,6 +54,7 @@ class PermissionsTableSeeder extends Seeder
 
             // admin & user per company
             'approve_item',
+            'accept_item',
             'reject_item',
             'restore_item',
 
