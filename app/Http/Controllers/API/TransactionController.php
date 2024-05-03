@@ -119,6 +119,13 @@ class TransactionController extends Controller
             // Loop through the array of item Ids and attach each on to the transaction
             foreach ($validatedData['item_ids'] as $itemId) {
                 $transaction->items()->attach($itemId);
+
+                // Archive an item once it has been transferred
+                $item = Item::find($itemId);
+
+                if($item) {
+                    $item->delete();
+                }
             }
 
             DB::commit();
@@ -249,7 +256,11 @@ class TransactionController extends Controller
             return [
                 'id' => $transaction->id,
                 'sender_full_name' => $transaction->sender->first_name . ' ' . $transaction->sender->last_name,
+                'sender_phone' => $transaction->sender->phone,
+                'sender_company' => $transaction->sender->company->company_name,
                 'receiver_full_name' => $transaction->receiver->first_name . ' ' . $transaction->receiver->last_name,
+                'receiver_company' => $transaction->receiver->company->company_name,
+                'receiver_phone' => $transaction->receiver->phone,
                 'address_from' => $transaction->address_from,
                 'address_to' => $transaction->address_to,
                 'items' => $items, // array of item names
@@ -300,6 +311,7 @@ class TransactionController extends Controller
                     'transaction_id' => $transaction->id,
                     'item_id' => $item->id,
                     'name' => $item->name,
+                    'quantity' => $item->quantity,
                     'description' => $item->description,
                     'status' => $item->pivot->status,
                     'approved_by' => $approverName,
