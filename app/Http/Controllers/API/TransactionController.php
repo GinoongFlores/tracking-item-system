@@ -53,6 +53,44 @@ class TransactionController extends Controller
 
 */
 {
+    // transactions customize response
+    protected function transformTransactions($transactions, $search = null) {
+
+       return $transactions->getCollection()->transform(function ($transaction) use ($search) {
+            $items = $transaction->items->filter(function ($item) use ($search) {
+                // Only include the item if its name or description matches the search query/term
+                return stripos($item->name, $search) !== false || stripos($item->description, $search) !== false;
+            })->map(function ($item) use ($transaction) {
+                $approver = User::find($item->pivot->approved_by);
+                $approverName = $approver ? $approver->first_name : null;
+                return [
+                    'transaction_id' => $transaction->id,
+                    'item_id' => $item->id,
+                    'name' => $item->name,
+                    'quantity' => $item->quantity,
+                    'description' => $item->description,
+                    'status' => $item->pivot->status,
+                    'approved_by' => $approverName,
+                    'approved_at' => $item->pivot->approved_at,
+                    'updated_at' => $item->pivot->updated_at,
+                    'image' => $item->image,
+                ];
+            })->toArray();
+
+            return [
+                'id' => $transaction->id,
+                'sender_full_name' => $transaction->sender->first_name . ' ' . $transaction->sender->last_name,
+                'sender_phone' => $transaction->sender->phone,
+                'sender_company' => $transaction->sender->company->company_name,
+                'receiver_full_name' => $transaction->receiver->first_name . ' ' . $transaction->receiver->last_name,
+                'receiver_company' => $transaction->receiver->company->company_name,
+                'receiver_phone' => $transaction->receiver->phone,
+                'address_from' => $transaction->address_from,
+                'address_to' => $transaction->address_to,
+                'items' => $items, // array of item names
+            ];
+        })->toArray();
+    }
 
     private function checkUserPermission (array $permissionNames, array $userRole = ['admin', 'user'])
     {
@@ -131,6 +169,36 @@ class TransactionController extends Controller
         }
     }
 
+    public function viewTransactionSuperAdmin()
+    {
+        if(!$this->checkUserPermission(['view_transfer_item'], ['super_admin'])) {
+            return $this->sendError(['error' => 'You dos not have permission to view transactions'], 400);
+        }
+
+        // search
+        $search = request()->query('search');
+        $query = TransactionDetail::query();
+
+        if($search) {
+            $query->where(function($query) use ($search) {
+                $query->where('address_from', "like", "%{$search}%")->orWhere('address_to', 'like', "%{$search}%")
+                ->orWhere('message', 'like', "%{$search}%")
+                ->orWhereHas('items', function($query) use ($search) {
+                    $query->where('name', 'like', "%{$search}%")->orWhere('description', 'like', "%{$search}%");
+                });
+            });
+        }
+
+        $transactions = $query->latest()->paginate(10);
+        if($transactions->isEmpty()) {
+            return $this->sendError(['error' => 'No transactions found'], 400);
+        }
+
+        $transformedTransactions = $this->transformTransactions($transactions, request()->query('search'));
+
+        return response()->json($transformedTransactions, 200);
+    }
+
     public function viewTransactionsPerAdmin()
     {
         if(!$this->checkUserPermission(['view_transfer_item'], ['admin']))
@@ -160,42 +228,14 @@ class TransactionController extends Controller
             return $this->sendError(['error' => 'No transactions found on this user'], 400);
         }
 
-        $transactions->getCollection()->transform(function ($transaction) use ($search) {
-            $items = $transaction->items->filter(function ($item) use ($search) {
-                // Only include the item if its name or description matches the search query/term
-                return stripos($item->name, $search) !== false || stripos($item->description, $search) !== false;
-            })->map(function ($item) use ($transaction) {
-                $approver = User::find($item->pivot->approved_by);
-                $approverName = $approver ? $approver->first_name : null;
-                return [
-                    'transaction_id' => $transaction->id,
-                    'item_id' => $item->id,
-                    'name' => $item->name,
-                    'quantity' => $item->quantity,
-                    'description' => $item->description,
-                    'status' => $item->pivot->status,
-                    'approved_by' => $approverName,
-                    'approved_at' => $item->pivot->approved_at,
-                    'updated_at' => $item->pivot->updated_at,
-                    'image' => $item->image,
-                ];
-            })->toArray();
+        $transactions = $query->latest()->paginate(10);
+        if($transactions->isEmpty()) {
+            return $this->sendError(['error' => 'No transactions found'], 400);
+        }
 
-            return [
-                'id' => $transaction->id,
-                'sender_full_name' => $transaction->sender->first_name . ' ' . $transaction->sender->last_name,
-                'sender_phone' => $transaction->sender->phone,
-                'sender_company' => $transaction->sender->company->company_name,
-                'receiver_full_name' => $transaction->receiver->first_name . ' ' . $transaction->receiver->last_name,
-                'receiver_company' => $transaction->receiver->company->company_name,
-                'receiver_phone' => $transaction->receiver->phone,
-                'address_from' => $transaction->address_from,
-                'address_to' => $transaction->address_to,
-                'items' => $items, // array of item names
-            ];
-        });
+        $transformedTransactions = $this->transformTransactions($transactions, request()->query('search'));
 
-        return response()->json($transactions, 200);
+        return response()->json($transformedTransactions, 200);
     }
 
     public function viewTransactionsPerUser()
@@ -226,41 +266,14 @@ class TransactionController extends Controller
             return $this->sendError(['error' => 'No transactions found on this user'], 400);
         }
 
-        $transactions->getCollection()->transform(function ($transaction) use ($search) {
-            $items = $transaction->items->filter(function ($item) use ($search) {
-                // Only include the item if its name or description matches the search query/term
-                return stripos($item->name, $search) !== false || stripos($item->description, $search) !== false;
-            })->map(function ($item) use ($transaction) {
-                $approver = User::find($item->pivot->approved_by);
-                $approverName = $approver ? $approver->first_name : null;
-                return [
-                    'transaction_id' => $transaction->id,
-                    'item_id' => $item->id,
-                    'name' => $item->name,
-                    'description' => $item->description,
-                    'status' => $item->pivot->status,
-                    'approved_by' => $approverName,
-                    'approved_at' => $item->pivot->approved_at,
-                    'updated_at' => $item->pivot->updated_at,
-                    'image' => $item->image,
-                ];
-            })->toArray();
+        $transactions = $query->latest()->paginate(10);
+        if($transactions->isEmpty()) {
+            return $this->sendError(['error' => 'No transactions found'], 400);
+        }
 
-            return [
-                'id' => $transaction->id,
-                'sender_full_name' => $transaction->sender->first_name . ' ' . $transaction->sender->last_name,
-                'sender_phone' => $transaction->sender->phone,
-                'sender_company' => $transaction->sender->company->company_name,
-                'receiver_full_name' => $transaction->receiver->first_name . ' ' . $transaction->receiver->last_name,
-                'receiver_company' => $transaction->receiver->company->company_name,
-                'receiver_phone' => $transaction->receiver->phone,
-                'address_from' => $transaction->address_from,
-                'address_to' => $transaction->address_to,
-                'items' => $items, // array of item names
-            ];
-        });
+        $transformedTransactions = $this->transformTransactions($transactions, request()->query('search'));
 
-        return response()->json($transactions, 200);
+        return response()->json($transformedTransactions, 200);
     }
 
        // function for userReceived item
@@ -293,38 +306,14 @@ class TransactionController extends Controller
             return $this->sendError(['error' => 'No transactions found on this user'], 400);
         }
 
-        $transactions->getCollection()->transform(function ($transaction) use ($search) {
-            $items = $transaction->items->filter(function ($item) use ($search) {
-                // Only include the item if its name or description matches the search query/term
-                return stripos($item->name, $search) !== false || stripos($item->description, $search) !== false;
-            })->map(function ($item) use ($transaction) {
-                $approver = User::find($item->pivot->approved_by);
-                $approverName = $approver ? $approver->first_name : null;
-                return [
-                    'transaction_id' => $transaction->id,
-                    'item_id' => $item->id,
-                    'name' => $item->name,
-                    'quantity' => $item->quantity,
-                    'description' => $item->description,
-                    'status' => $item->pivot->status,
-                    'approved_by' => $approverName,
-                    'approved_at' => $item->pivot->approved_at,
-                    'updated_at' => $item->pivot->updated_at,
-                    'image' => $item->image,
-                ];
-            })->toArray();
+        $transactions = $query->latest()->paginate(10);
+        if($transactions->isEmpty()) {
+            return $this->sendError(['error' => 'No transactions found'], 400);
+        }
 
-            return [
-                'id' => $transaction->id,
-                'sender_full_name' => $transaction->sender->first_name . ' ' . $transaction->sender->last_name,
-                'receiver_full_name' => $transaction->receiver->first_name . ' ' . $transaction->receiver->last_name,
-                'address_from' => $transaction->address_from,
-                'address_to' => $transaction->address_to,
-                'items' => $items, // array of item names
-            ];
-        });
+        $transformedTransactions = $this->transformTransactions($transactions, request()->query('search'));
 
-        return response()->json($transactions, 200);
+        return response()->json($transformedTransactions, 200);
        }
 
     public function transactionStatus(Request $request, $transactionId)
