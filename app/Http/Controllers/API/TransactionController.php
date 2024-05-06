@@ -223,12 +223,6 @@ class TransactionController extends Controller
         }
 
         $transactions = $query->latest()->paginate(10);
-
-        if(!$transactions) {
-            return $this->sendError(['error' => 'No transactions found on this user'], 400);
-        }
-
-        $transactions = $query->latest()->paginate(10);
         if($transactions->isEmpty()) {
             return $this->sendError(['error' => 'No transactions found'], 400);
         }
@@ -260,11 +254,6 @@ class TransactionController extends Controller
             });
         }
 
-      $transactions = $query->latest()->paginate(10);
-
-        if(!$transactions) {
-            return $this->sendError(['error' => 'No transactions found on this user'], 400);
-        }
 
         $transactions = $query->latest()->paginate(10);
         if($transactions->isEmpty()) {
@@ -300,11 +289,6 @@ class TransactionController extends Controller
             });
         }
 
-      $transactions = $query->latest()->paginate(10);
-
-        if(!$transactions) {
-            return $this->sendError(['error' => 'No transactions found on this user'], 400);
-        }
 
         $transactions = $query->latest()->paginate(10);
         if($transactions->isEmpty()) {
