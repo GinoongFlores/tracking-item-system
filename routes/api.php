@@ -66,17 +66,18 @@ Route::middleware('auth:api')->group(function () {
         // Route::get('/items', [ItemController::class, 'userItemIndex']);
         Route::get('/user/trashed', [ItemController::class, 'currentUserTrashedItems']);
         // Route::get('/user', [ItemController::class, 'CurrentUserItem']);
-        Route::post('/{id}/user/update', [ItemController::class, 'updateCurrentUserItem']);
+        Route::post('/{id}/user/update', [ItemController::class, 'update']);
+        Route::post('/{id}/update', [ItemController::class, 'update']);
         Route::post('/add', [ItemController::class, 'store']);
         Route::post('/{id}/restore', [ItemController::class, 'restore']);
         Route::post('/{id}/user/restore', [ItemController::class, 'restoreCurrentUserTrashedItems']);
-        Route::post('/{id}/update', [ItemController::class, 'update']);
         Route::delete('/{id}/delete', [ItemController::class, 'destroy']);
 
         // transfer item
         Route::post('/transfer', [TransactionController::class, 'transferItem']);
         Route::post('/transfer/{id}/status', [TransactionController::class, 'transactionStatus']);
         Route::post('/transaction/{transactionId}/received-item/{itemId}', [TransactionController::class, 'userAcceptItemStatus']);
+        Route::get('/view-transactions', [TransactionController::class, 'viewTransactionSuperAdmin']);
         Route::get('/admin/view-transactions', [TransactionController::class, 'viewTransactionsPerAdmin']);
         Route::get('/user/view-transactions', [TransactionController::class, 'viewTransactionsPerUser']);
         Route::get('/received/view-transactions', [TransactionController::class, 'viewTransactionsForReceiver']);
