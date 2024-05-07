@@ -64,7 +64,7 @@ class ItemController extends Controller
     {
         $user = Auth::user();
 
-        $items = Item::where('company_id', $user->company_id)
+        $items = Item::where('user_id', $user->id)
         ->where(function ($query) use ($request) {
             $query->where('name', 'LIKE', "%{$request->get('query')}%")
             ->orWhere('description', 'LIKE', "%{$request->get('query')}%");
