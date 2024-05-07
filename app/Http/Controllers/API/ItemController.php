@@ -33,31 +33,28 @@ class ItemController extends Controller
         return true;
     }
 
-    public function index(Request $request)
+    public function index()
     {
         $user = Auth::user();
         $role = $user->roles->first()->role_name;
 
         $query = Item::query();
-
-        if ($role === "super_admin") {
-            // super admin can view all items across all companies
-            $query->join('companies', 'items.company_id', '=', 'companies.id');
-        } elseif ($role === "admin" || $role === "user") {
-            // Admin and user can view all items within their company
-            $query->where('items.company_id', $user->company_id)->join('companies', 'items.company_id', '=', 'companies.id');
+        if ($role === "admin") {
+            // if the user is an admin, only fetch items from their company
+            $query->where('company_id', $user->company_id);
+        } elseif ($role === "user") {
+            // if the user is a user, only fetch items created by them
+            $query->where('user_id', $user->id);
         }
 
         $search = request()->query('search');
 
         if($search) {
-               $query->where(function($query) use ($search) {
-                $query->where('items.name', 'LIKE', "%{$search}%")
-                ->orWhere('items.description', 'LIKE', "%{$search}%");
-               });
+                $query->where('name', 'LIKE', "%{$search}%")
+                    ->orWhere('description', 'LIKE', "%{$search}%");
             }
 
-        $items = $query->select('items.id', 'items.name', 'items.description', 'items.quantity', 'items.image', 'companies.company_name')->latest('items.created_at')->paginate(10);
+        $items = $query->latest()->paginate(10);
 
       return response()->json($items, 200);
     }
@@ -68,13 +65,10 @@ class ItemController extends Controller
         $user = Auth::user();
 
         $items = Item::where('company_id', $user->company_id)
-        ->join('companies', 'items.company_id', '=', 'companies.id')
         ->where(function ($query) use ($request) {
-            $query->where('items.name', 'LIKE', "%{$request->get('query')}%")
-            ->orWhere('items.description', 'LIKE', "%{$request->get('query')}%");
-        })
-        ->select('items.id', 'items.name', 'items.description', 'items.quantity', 'items.image', 'companies.company_name')
-        ->get();
+            $query->where('name', 'LIKE', "%{$request->get('query')}%")
+            ->orWhere('description', 'LIKE', "%{$request->get('query')}%");
+        })->select('id', 'name', 'description', 'quantity', 'image')->get();
 
         return $this->sendResponse($items->toArray(), '');
     }
