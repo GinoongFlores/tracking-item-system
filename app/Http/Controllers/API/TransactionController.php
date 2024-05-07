@@ -56,7 +56,7 @@ class TransactionController extends Controller
     // transactions customize response
     protected function transformTransactions($transactions, $search = null) {
 
-       return $transactions->getCollection()->transform(function ($transaction) use ($search) {
+       $transformedData = $transactions->getCollection()->transform(function ($transaction) use ($search) {
             $items = $transaction->items->filter(function ($item) use ($search) {
                 // Only include the item if its name or description matches the search query/term
                 return stripos($item->name, $search) !== false || stripos($item->description, $search) !== false;
@@ -90,6 +90,9 @@ class TransactionController extends Controller
                 'items' => $items, // array of item names
             ];
         })->toArray();
+
+        // wrap the data with the data object
+        return ['data' => $transformedData];
     }
 
     private function checkUserPermission (array $permissionNames, array $userRole = ['admin', 'user'])
