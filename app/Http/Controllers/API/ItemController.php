@@ -128,48 +128,6 @@ class ItemController extends Controller
 
     }
 
-    // update an item
-    public function update(Request $request, $itemId)
-    {
-        // check user permission
-        if(!$this->checkUserPermission(['edit_item'], ['admin', 'user'])) {
-            return $this->sendError(['error' => 'You do not have permission to edit an item'], 400);
-        }
-
-        $validator = Validator::make($request->all(), [
-            'name' => 'max:255|string|unique:items,name,'.$itemId,
-            'description' => 'max:255|string',
-            'quantity' => 'integer',
-            'image' => 'nullable|image|mimes:jpeg,png,jpg,gif,svg|max:2048',
-        ],
-        [
-            'name.unique' => 'The item has been already added',
-        ]);
-
-        if ($validator->fails()) {
-            return $this->sendError(['error' => $validator->errors()], 400);
-        }
-
-        DB::beginTransaction();
-
-        try {
-            $item = Item::find($itemId);
-
-            if(!$item) {
-                return $this->sendError(['error' => 'Item does not exist'], 400);
-            }
-
-            $item->update($request->all());
-
-            DB::commit();
-
-            return $this->sendResponse($item->toArray(), 'Item updated successfully');
-        } catch (\Exception $e){
-            DB::rollBack();
-            return $this->sendError(['error' => $e->getMessage()], 400);
-        }
-    }
-
     public function destroy ($itemId) : JsonResponse
     {
         DB::beginTransaction();
@@ -231,6 +189,62 @@ class ItemController extends Controller
             return $this->sendError(['error' => 'User not found'], 404);
         }
     }
+
+
+    // update an item
+    public function update(Request $request, $itemId)
+    {
+
+        $user = Auth::user();
+
+        // Define the permissions required to update an item
+        $requiredPermissions = ['edit_item'];
+        $allowedRoles = ['super_admin', 'admin', 'user'];
+
+        // check if the user has the required permissions
+        if(!$this->checkUserPermission($requiredPermissions, $allowedRoles)) {
+            return $this->sendError(['error' => 'You do not have permission to edit an item'], 400);
+        }
+
+        $itemQuery = Item::query();
+
+        // if the user is not a super_admin, restrict the update to their own items
+        if(!$user->hasRole('super_admin')) {
+            $itemQuery->where('user_id', $user->id);
+        }
+
+        $item = $itemQuery->find($itemId);
+        if(!$item) {
+            return $this->sendError(['error' => 'Item does not exist or does not belong to this user'], 404);
+        }
+
+        $validator = Validator::make($request->all(), [
+            'name' => 'max:255|string|unique:items,name,'.$itemId,
+            'description' => 'max:255|string',
+            'quantity' => 'integer',
+            'image' => 'nullable|image|mimes:jpeg,png,jpg,gif,svg|max:2048',
+        ],
+        [
+            'name.unique' => 'The item has been already added',
+        ]);
+
+        if ($validator->fails()) {
+            return $this->sendError(['error' => $validator->errors()], 400);
+        }
+
+        DB::beginTransaction();
+
+        try {
+            $item->update($request->all());
+            DB::commit();
+
+            return $this->sendResponse($item->toArray(), 'Item updated successfully');
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return $this->sendError(['error' => $e->getMessage()], 400);
+        }
+    }
+
 
     public function updateCurrentUserItem(Request $request, $itemId) : JsonResponse
     {
