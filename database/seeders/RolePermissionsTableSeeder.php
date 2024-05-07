@@ -45,6 +45,7 @@ class RolePermissionsTableSeeder extends Seeder
             'edit_admin',
             'delete_admin',
 
+            'edit_item',
             'view_transfer_item',
             'delete_transfer_item',
             'restore_transfer_item',
